@@ -12,28 +12,28 @@ export class AuthService {
   ) {}
 
   async validateUser(userId: string, password: string) {
-    try {
-      const user = await this.userService.findOne(userId);
+    const user = await this.userService.findOne(userId);
+    if (!user) return null;
 
-      if (user.tokenFreeLogin) return user;
-      if (user.password !== password) return null;
-      return user;
-    } catch (err) {
-      return await this.userService.create({
-        userId,
-        password,
-        studyPreference: '알수없음',
-      });
+    // 비밀번호 검사 (tokenFreeLogin 제거)
+    if (user.password !== password) {
+      return null;
     }
+
+    return user;
   }
 
   async login(dto: LoginDto) {
     const user = await this.validateUser(dto.userId, dto.password);
 
-    if (!user) throw new UnauthorizedException('잘못된 사용자 정보입니다.');
+    if (!user) {
+      throw new UnauthorizedException('잘못된 사용자 정보입니다.');
+    }
 
     const payload = { sub: user.userId };
-    return { access_token: this.jwtService.sign(payload) };
+    return {
+      access_token: this.jwtService.sign(payload),
+    };
   }
 
   async signup(dto: CreateUserDto) {
