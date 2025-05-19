@@ -22,15 +22,11 @@ let UserService = class UserService {
             data: {
                 userId: createUserDto.userId,
                 password: createUserDto.password,
-                tokenFreeLogin: true,
             },
         });
     }
     async findOne(userId) {
-        const user = await this.prisma.user.findUnique({ where: { userId } });
-        if (!user)
-            throw new common_1.NotFoundException(`User with ID ${userId} not found`);
-        return user;
+        return this.prisma.user.findUnique({ where: { userId } });
     }
     async findAll() {
         return this.prisma.user.findMany();

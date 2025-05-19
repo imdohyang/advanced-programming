@@ -21,28 +21,23 @@ let AuthService = class AuthService {
         this.jwtService = jwtService;
     }
     async validateUser(userId, password) {
-        try {
-            const user = await this.userService.findOne(userId);
-            if (user.tokenFreeLogin)
-                return user;
-            if (user.password !== password)
-                return null;
-            return user;
+        const user = await this.userService.findOne(userId);
+        if (!user)
+            return null;
+        if (user.password !== password) {
+            return null;
         }
-        catch (err) {
-            return await this.userService.create({
-                userId,
-                password,
-                studyPreference: '알수없음',
-            });
-        }
+        return user;
     }
     async login(dto) {
         const user = await this.validateUser(dto.userId, dto.password);
-        if (!user)
+        if (!user) {
             throw new common_1.UnauthorizedException('잘못된 사용자 정보입니다.');
+        }
         const payload = { sub: user.userId };
-        return { access_token: this.jwtService.sign(payload) };
+        return {
+            access_token: this.jwtService.sign(payload),
+        };
     }
     async signup(dto) {
         return await this.userService.create(dto);
