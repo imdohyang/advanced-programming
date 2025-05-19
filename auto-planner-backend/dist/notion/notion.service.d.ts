@@ -1,10 +1,10 @@
 import { ConfigService } from '@nestjs/config';
 import { SyncToNotionDto } from './dto/sync-to-notion.dto';
 export declare class NotionService {
-    private configService;
-    private notion;
-    private databaseId;
+    private readonly configService;
+    private readonly defaultDatabaseId;
     constructor(configService: ConfigService);
+    private getClientForUser;
     addPlanEntry(data: {
         userId: string;
         subject: string;
@@ -14,8 +14,5 @@ export declare class NotionService {
     syncToNotion(dto: SyncToNotionDto): Promise<{
         message: string;
         count: number;
-    }>;
-    saveScheduleToNotion(userId: string, schedule: any[]): Promise<{
-        message: string;
     }>;
 }

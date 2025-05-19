@@ -13,20 +13,25 @@ exports.NotionService = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const client_1 = require("@notionhq/client");
+const notion_token_store_1 = require("../auth/notion-token.store");
 let NotionService = class NotionService {
     configService;
-    notion;
-    databaseId;
+    defaultDatabaseId;
     constructor(configService) {
         this.configService = configService;
-        this.notion = new client_1.Client({
-            auth: this.configService.get('NOTION_TOKEN'),
-        });
-        this.databaseId = this.configService.get('DATABASE_ID') ?? 'default-id';
+        this.defaultDatabaseId = this.configService.get('DATABASE_ID') ?? 'default-id';
+    }
+    getClientForUser(userId) {
+        const userToken = (0, notion_token_store_1.getToken)(userId);
+        if (!userToken) {
+            throw new Error(`❌ Notion token not found for user ${userId}`);
+        }
+        return new client_1.Client({ auth: userToken });
     }
     async addPlanEntry(data) {
-        return await this.notion.pages.create({
-            parent: { database_id: this.databaseId },
+        const notion = this.getClientForUser(data.userId);
+        return await notion.pages.create({
+            parent: { database_id: this.defaultDatabaseId },
             properties: {
                 Subject: {
                     title: [{ text: { content: data.subject } }],
@@ -46,59 +51,18 @@ let NotionService = class NotionService {
     async syncToNotion(dto) {
         for (const entry of dto.dailyPlan) {
             const [date, content] = entry.split(':').map((v) => v.trim());
+            const formattedDate = `2025-${date.replace('/', '-')}`;
             await this.addPlanEntry({
                 userId: dto.userId,
                 subject: dto.subject,
-                date: `2025-${date.replace('/', '-')}`,
+                date: formattedDate,
                 content,
             });
         }
-        return { message: '노션 연동 완료', count: dto.dailyPlan.length };
-    }
-    async saveScheduleToNotion(userId, schedule) {
-        const calendarId = this.configService.get('NOTION_CALENDAR_ID');
-        if (!calendarId)
-            throw new Error('Notion 캘린더 ID가 설정되지 않았습니다.');
-        for (const entry of schedule) {
-            await this.notion.pages.create({
-                parent: { database_id: calendarId },
-                properties: {
-                    Name: {
-                        title: [
-                            {
-                                text: {
-                                    content: `Day ${entry.day} 학습`,
-                                },
-                            },
-                        ],
-                    },
-                    Date: {
-                        date: {
-                            start: entry.date,
-                        },
-                    },
-                    Tasks: {
-                        rich_text: [
-                            {
-                                text: {
-                                    content: entry.tasks.join(', '),
-                                },
-                            },
-                        ],
-                    },
-                    User: {
-                        rich_text: [
-                            {
-                                text: {
-                                    content: userId,
-                                },
-                            },
-                        ],
-                    },
-                },
-            });
-        }
-        return { message: 'Notion 일정 등록 완료' };
+        return {
+            message: '📌 노션 연동 완료',
+            count: dto.dailyPlan.length,
+        };
     }
 };
 exports.NotionService = NotionService;

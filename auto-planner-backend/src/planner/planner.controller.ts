@@ -19,7 +19,7 @@ export class PlannerController {
     @Param('id') id: string,
     @Body() dto: ConfirmPlanDto,
   ) {
-    const token = getToken(id); // ✅ Notion token 불러오기
+    const token = getToken(dto.userId); // ✅ Notion token 불러오기
     console.log(`[PLANNER] 불러온 Notion token: ${token}`);
 
     return this.plannerService.confirmPlan(id, dto);

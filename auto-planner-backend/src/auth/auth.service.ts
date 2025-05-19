@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  NotFoundException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from 'src/user/user.service';
 import { LoginDto } from './dto/login.dto';
@@ -12,23 +16,16 @@ export class AuthService {
   ) {}
 
   async validateUser(userId: string, password: string) {
-    const user = await this.userService.findOne(userId);
-    if (!user) return null;
-
-    // 비밀번호 검사 (tokenFreeLogin 제거)
+    const user = await this.userService.findOne(userId); // ❗ 존재하지 않으면 404 자동 던짐
     if (user.password !== password) {
-      return null;
+      throw new UnauthorizedException('비밀번호가 올바르지 않습니다.');
     }
-
     return user;
   }
 
   async login(dto: LoginDto) {
+    // ❗ 존재하지 않는 userId면 NotFoundException 발생
     const user = await this.validateUser(dto.userId, dto.password);
-
-    if (!user) {
-      throw new UnauthorizedException('잘못된 사용자 정보입니다.');
-    }
 
     const payload = { sub: user.userId };
     return {

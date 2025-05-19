@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 
@@ -11,13 +11,18 @@ export class UserService {
       data: {
         userId: createUserDto.userId,
         password: createUserDto.password,
-        // tokenFreeLogin 제거 또는 false로 고정
       },
     });
   }
 
   async findOne(userId: string) {
-    return this.prisma.user.findUnique({ where: { userId } });
+    const user = await this.prisma.user.findUnique({ where: { userId } });
+
+    if (!user) {
+      throw new NotFoundException('해당 사용자를 찾을 수 없습니다.');
+    }
+
+    return user;
   }
 
   async findAll() {
