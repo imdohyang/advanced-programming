@@ -9,20 +9,20 @@ export declare class ExamController {
             chapters: {
                 id: number;
                 createdAt: Date;
+                chapterTitle: string;
+                difficulty: string;
+                contentVolume: number;
                 updatedAt: Date;
                 examId: number;
-                chapterTitle: string;
-                difficulty: number;
-                contentVolume: number;
             }[];
         } & {
+            userId: number;
             id: number;
+            createdAt: Date;
             subject: string;
             startDate: Date;
             endDate: Date;
             importance: number;
-            userId: number;
-            createdAt: Date;
             updatedAt: Date;
         };
     }>;
@@ -32,20 +32,20 @@ export declare class ExamController {
             chapters: {
                 id: number;
                 createdAt: Date;
+                chapterTitle: string;
+                difficulty: string;
+                contentVolume: number;
                 updatedAt: Date;
                 examId: number;
-                chapterTitle: string;
-                difficulty: number;
-                contentVolume: number;
             }[];
         } & {
+            userId: number;
             id: number;
+            createdAt: Date;
             subject: string;
             startDate: Date;
             endDate: Date;
             importance: number;
-            userId: number;
-            createdAt: Date;
             updatedAt: Date;
         })[];
     }>;
