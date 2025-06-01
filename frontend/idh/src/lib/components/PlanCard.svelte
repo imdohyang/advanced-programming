@@ -1,8 +1,27 @@
-<script>
+<script lang="ts">
   import { goto } from '$app/navigation';
+  import { getUserPreference } from '$lib/api/userPreference';
 
-  function handleGoToExam() {
-    goto('/exam');
+  export let userId: string;
+
+  async function handleGoToExam() {
+    console.log('userId:', userId);
+    try {
+      const preference = await getUserPreference(userId);
+
+      // preference가 존재하는지 확인 (예: style이 없으면 설정 안 된 것으로 간주)
+      if (!preference?.style || !preference?.studyDays || !preference?.sessionsPerDay) {
+        alert('먼저 학습 선호도를 설정해주세요!');
+        goto('/userpreference');
+        return;
+      }
+
+      goto('/exam');
+    } catch (err) {
+      // fetch 실패 시도 설정 페이지로 안내
+      alert('학습 선호도를 먼저 설정해주세요!');
+      goto('/userpreference');
+    }
   }
 </script>
 

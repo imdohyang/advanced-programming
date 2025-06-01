@@ -8,10 +8,10 @@
 
   import { deleteExam, createExam } from '$lib/api/exam';
 
-  const difficultyOptions = ['선택', '쉬움', '보통', '어려움'];
+  const difficultyOptions = ['난이도 선택', '쉬움', '보통', '어려움'];
 
   function addUnit() {
-    const newUnits = [...subjectData.units, { unitName: '', studyAmount: '', difficulty: '선택' }];
+    const newUnits = [...subjectData.units, { unitName: '', studyAmount: '', difficulty: '난이도 선택' }];
     const newSubject = { ...subjectData, units: newUnits };
     onChange(index, newSubject);
   }
@@ -46,11 +46,28 @@
     }
   }
 
+  // ✅ 중복 과목명 체크 함수
+  async function checkSubjectExists(userId, subjectName) {
+    const res = await fetch(`https://advanced-programming.onrender.com/exam/${userId}`);
+    if (!res.ok) {
+      throw new Error('과목 정보 확인 실패');
+    }
+    const data = await res.json();
+    return data.exams.some(exam => exam.subject.trim() === subjectName.trim());
+  }
+
   async function handleConfirm() {
     try {
+      // ✅ 과목 중복 체크
+      const isDuplicate = await checkSubjectExists(userId, subjectData.subjectName);
+      if (isDuplicate) {
+        alert('⚠️ 이미 등록한 과목입니다.');
+        return;
+      }
+
       const chapters = subjectData.units.map(unit => ({
         chapterTitle: unit.unitName,
-        contentVolume: unit.studyAmount,
+        contentVolume: Number(unit.studyAmount),
         difficulty: unit.difficulty,
       }));
 
@@ -104,7 +121,7 @@
         <input type="text" placeholder="학습량" bind:value={unit.studyAmount} on:input={(e) => handleUnitChange(i, 'studyAmount', e.target.value)} class="unit-input" />
         <select bind:value={unit.difficulty} on:change={(e) => handleUnitChange(i, 'difficulty', e.target.value)} class="unit-select">
           {#each difficultyOptions as option}
-            <option value={option.toLowerCase() === '선택' ? '' : option}>{option}</option>
+            <option value={option}>{option}</option>
           {/each}
         </select>
         {#if subjectData.units.length > 1}

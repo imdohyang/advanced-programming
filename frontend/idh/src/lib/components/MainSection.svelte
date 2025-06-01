@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { saveUserPreference } from '$lib/api/userPreference';
+  import { onMount } from 'svelte';
+  import { saveUserPreference, getUserPreference } from '$lib/api/userPreference';
 
-  let userId = 'user123';
-
+  let userId = '';
   let learningStyle: 'focus' | 'parallel' = 'focus';
   let studyDays: { [key: string]: boolean } = {
     mon: false, tue: false, wed: false,
@@ -10,19 +10,55 @@
   };
   let studySessions = 5;
 
+  // ✅ 초기화 시, 로그인 정보 확인 + 기존 설정 로딩
+  onMount(async () => {
+    const storedId = localStorage.getItem('userId');
+    if (!storedId) {
+      alert('로그인이 필요합니다.');
+      window.location.href = '/';
+      return;
+    }
+    userId = storedId;
+
+    try {
+      const res = await getUserPreference(userId);
+
+      // ✅ 기존 설정 반영
+      if (res) {
+        learningStyle = res.style === 'focus' ? 'focus' : 'parallel';
+
+        // 요일은 문자열 배열 → 객체로 다시 매핑
+        for (const key in studyDays) {
+          studyDays[key] = res.studyDays.includes(convertDayKeyToKor(key));
+        }
+
+        studySessions = res.sessionsPerDay;
+      }
+    } catch (err: any) {
+      if (err.message?.includes('404')) {
+        // 처음인 경우 (기본값 유지)
+        console.log('사용자 설정이 없습니다. 초기값으로 시작합니다.');
+      } else {
+        console.error('불러오기 오류:', err);
+        alert('사용자 설정이 없습니다. 초기값으로 시작합니다.');
+      }
+    }
+  });
+
+  // 영어 요일 key → 한글 변환 함수
+  function convertDayKeyToKor(key: string): string {
+    const map = { mon: '월', tue: '화', wed: '수', thu: '목', fri: '금', sat: '토', sun: '일' };
+    return map[key];
+  }
+
   function toggleDay(day: string) {
     studyDays[day] = !studyDays[day];
   }
 
   async function handleSubmit() {
-    const dayMap: { [key: string]: string } = {
-      mon: '월', tue: '화', wed: '수',
-      thu: '목', fri: '금', sat: '토', sun: '일',
-    };
-
     const selectedDays = Object.entries(studyDays)
       .filter(([_, selected]) => selected)
-      .map(([key]) => dayMap[key]);
+      .map(([key]) => convertDayKeyToKor(key));
 
     const body = {
       style: learningStyle,
@@ -33,6 +69,7 @@
     try {
       await saveUserPreference(userId, body);
       alert('✅ 설정이 저장되었습니다!');
+      window.location.href = '/userinfo';
     } catch (err) {
       console.error(err);
       alert('⚠️ 설정 저장 실패!');
@@ -46,7 +83,7 @@
     <div class="profile-header">
       <div class="avatar-placeholder"></div>
       <div class="user-info">
-        <p class="user-email">user123@email.com</p>
+        <p class="user-email">{userId}@email.com</p>
         <p class="manage-settings-text">학습 설정 관리</p>
       </div>
     </div>

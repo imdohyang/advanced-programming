@@ -2,9 +2,7 @@ import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LlmClientService } from './server/llm-client.service';
 import { format } from 'date-fns';
-import { SyncToNotionDto } from '../../notion/dto/sync-to-notion.dto';
-import { extractJsonBlock } from './utils/json-utils'; // 경로에 맞게
-
+import { extractJsonBlock } from './utils/json-utils';
 
 @Injectable()
 export class AiPlannerService {
@@ -13,7 +11,7 @@ export class AiPlannerService {
     private readonly llmClient: LlmClientService,
   ) {}
 
-  async generateStudyPlan(userId: string, databaseId?: string): Promise<SyncToNotionDto[]> {
+  async generateStudyPlan(userId: string, databaseId?: string): Promise<any[]> {
     const user = await this.prisma.user.findUnique({
       where: { userId },
       include: {
@@ -25,30 +23,26 @@ export class AiPlannerService {
     });
 
     if (!user || !user.preference || user.exams.length === 0) {
-      throw new InternalServerErrorException('[❌ 사용자 정보 부족]');
+      throw new InternalServerErrorException('[❌ 사용자 정보 부케]');
     }
 
     const prompt = this.createPromptFromUserData(user);
-
     const llmRawResponse = await this.llmClient.generateSummary(prompt);
 
-    let parsed: any[] = [];
+    let parsed = [];
     try {
       const jsonOnly = extractJsonBlock(llmRawResponse);
-      parsed = JSON.parse(jsonOnly);  // ✅ JSON 부분만 안전하게 파싱
+      parsed = JSON.parse(jsonOnly);
     } catch (err) {
       console.error('[❌ JSON 파싱 실패]', llmRawResponse);
       throw new InternalServerErrorException('LLM 응답 JSON 파싱 실패');
     }
 
-    // 필수 필드 추가 (userId, databaseId)
     const resultWithMeta = parsed.map(plan => ({
       ...plan,
       userId,
       databaseId,
     }));
-
-    // TODO: 저장 로직 (향후 StudyPlan 테이블에 저장 예정)
 
     return resultWithMeta;
   }
@@ -62,11 +56,10 @@ export class AiPlannerService {
     const examStr = exams
       .map(exam => {
         const chapters = exam.chapters
-          .map(c =>
-            `    - ${c.chapterTitle} (${c.difficulty}, ${c.contentVolume}p)`
-          )
+          .map(c => `    - ${c.chapterTitle} (${c.difficulty}, ${c.contentVolume}p)`)
           .join('\n');
-        return `과목: ${exam.subject}\n기간: ${format(exam.startDate, 'yyyy-MM-dd')} ~ ${format(exam.endDate, 'yyyy-MM-dd')}\n중요도: ${exam.importance}\n챕터:\n${chapters}`;
+
+        return `과목: ${exam.subject}\n기간: ${format(exam.startDate, 'yyyy-MM-dd')} ~ ${format(exam.endDate, 'yyyy-MM-dd')} (마지막 날은 시험일입니다)\n중요도: ${exam.importance}\n챕터:\n${chapters}`;
       })
       .join('\n\n');
 
@@ -89,13 +82,20 @@ ${examStr}
     "endDate": "2025-06-16",
     "dailyPlan": [
       "6/1: Chapter 1 (p.1-10)",
-      "6/2: Chapter 2 (p.11-30)",
-      ...
+      "6/2: Chapter 2 (p.11-30)"
     ]
   }
 ]
 
+제약 조건:
+- exam.importance가 높을수록 학습 우선순위를 높여줘.
+- chapter.difficulty가 높을수록 하루에 적은 분량(페이지 수)을 할당해줘.
+- preference.style이 "multi"이면 하루에 여러 과목을 섞어서 공부할 수 있어.
+- preference.style이 "focus"이면 하루에 한 과목만 집중해서 공부해야 해.
+- preference.sessionsPerDay는 하루 최대 공부 세션 수를 의미해.
+- preference.studyDays는 사용자가 공부 가능한 요일이야 (예: ["월", "화", "수", "목", "금"]).
+
 위 형식만 따르고, JSON 배열만 출력해.
-`.trim();
+    `.trim();
   }
 }

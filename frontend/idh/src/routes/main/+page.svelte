@@ -9,11 +9,15 @@
   import PlanCard from '$lib/components/PlanCard.svelte';
   import NotionLink from '$lib/components/NotionLink.svelte';
 
+  let userId = null;
+
   onMount(() => {
     const token = sessionStorage.getItem('token');
     if (!token) {
       goto('/'); // 로그인 페이지로 리디렉션
     }
+
+    userId = localStorage.getItem('userId');
   });
 </script>
 
@@ -28,7 +32,11 @@
       <Welcome />
       <div class="cards-row">
         <MyInfoCard />
-        <PlanCard />
+        {#if userId}
+          <PlanCard userId={userId}/>
+        {:else}
+          <p>userId를 불러오는 중입니다...</p>
+        {/if}
       </div>
       <NotionLink />
     </div>

@@ -39,12 +39,12 @@ export class AuthService {
 
   const payload = {
     sub: user.userId,
-    // userId: user.userId, // ✅ 이 라인 추가!
+    userId: user.userId, // ✅ 이 라인 추가!
   };
 
   return {
     access_token: this.jwtService.sign(payload),
-    userId: user.userId, // 이 라인 추가 방식으로 수정
+    // userId: user.userId, // 이 라인 추가 방식으로 수정
   };
 }
 

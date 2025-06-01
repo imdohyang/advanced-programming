@@ -31,10 +31,10 @@ let AuthService = class AuthService {
         const user = await this.validateUser(dto.userId, dto.password);
         const payload = {
             sub: user.userId,
+            userId: user.userId,
         };
         return {
             access_token: this.jwtService.sign(payload),
-            userId: user.userId,
         };
     }
     async signup(dto) {

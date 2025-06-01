@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { CalendarCheck, UserRound } from 'lucide-svelte';
+  import { CalendarCheck, UserRound, Eye, EyeOff } from 'lucide-svelte';
   import { goto } from '$app/navigation';
   import { login } from '$lib/api/auth';
 
@@ -8,11 +8,12 @@
   let loginError = false;
   let errorMessage = '';
   let userIdInput;
+  let showPassword = false; // 디폴트: false (비밀번호 숨김, EyeOff 표시)
 
   async function handleLogin() {
     try {
-      const result = await login({ userId, password }); // ✅ userId 키 사용
-      sessionStorage.setItem('token', result.access_token);
+      const result = await login({ userId, password });
+      sessionStorage.setItem('token', result.token);     
       sessionStorage.setItem('userId', result.userId);
       loginError = false;
       goto('/main');
@@ -77,13 +78,15 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    padding: 1rem;
   }
 
   .login-box {
     background: white;
     padding: 2rem;
-    width: 400px;
-    height: 650px;
+    width: 100%;
+    max-width: 400px;
+    height: auto;
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     text-align: center;
@@ -127,6 +130,63 @@
     margin-bottom: 1rem;
     border: 1px solid #ccc;
     border-radius: 4px;
+    box-sizing: border-box;
+    font-size: 1rem;
+    height: 40px;
+    line-height: 1.2;
+    vertical-align: middle;
+  }
+
+  .password-wrapper {
+    position: relative;
+    width: 100%;
+    margin-bottom: 1rem;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    margin-top: 12px; /* 비밀번호 칸만 아래로 */
+  }
+
+  .password-wrapper input {
+    width: 100%;
+    padding: 0.5rem;
+    padding-right: 2.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+    font-size: 1rem;
+    height: 40px;
+    line-height: 1.2;
+    vertical-align: middle;
+  }
+
+  .eye-button {
+    position: absolute;
+    top: 50%;
+    right: 0.75rem;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #6b7280;
+    box-sizing: border-box;
+  }
+
+  .eye-button :global(svg) {
+    width: 20px !important;
+    height: 20px !important;
+    display: block;
+    margin: 0;
+    padding: 0;
+    vertical-align: middle;
+    margin-bottom: 15px;
   }
 
   input::placeholder {
@@ -142,13 +202,6 @@
     height: 1.5rem;
   }
 
-  .options {
-    display: flex;
-    justify-content: flex-end;
-    font-size: 0.875rem;
-    margin-bottom: 1rem;
-  }
-
   button {
     background-color: #1f2937;
     color: white;
@@ -159,6 +212,9 @@
     font-weight: bold;
     margin-bottom: 1rem;
     cursor: pointer;
+    height: 40px;
+    font-size: 1rem;
+    box-sizing: border-box;
   }
 
   .divider {
@@ -177,6 +233,29 @@
     text-decoration: underline;
     cursor: pointer;
     margin-top: 0.25rem;
+  }
+
+  @media (max-width: 480px) {
+    .login-box {
+      padding: 1.25rem;
+    }
+
+    .login-box h2 {
+      font-size: 1.125rem;
+    }
+
+    .login-box p {
+      font-size: 0.8rem;
+    }
+
+    button {
+      font-size: 0.95rem;
+      height: 36px;
+    }
+    .password-wrapper,
+    .password-wrapper input {
+      height: 36px;
+    }
   }
 </style>
 
@@ -208,13 +287,29 @@
           placeholder="아이디를 입력하세요"
         />
       </div>
+
       <div>
         <label>비밀번호</label>
-        <input
-          type="password"
-          bind:value={password}
-          placeholder="비밀번호를 입력하세요"
-        />
+        <div class="password-wrapper">
+          <input
+            type={showPassword ? 'text' : 'password'}
+            bind:value={password}
+            placeholder="비밀번호를 입력하세요"
+          />
+          <button
+            type="button"
+            class="eye-button"
+            on:click={() => (showPassword = !showPassword)}
+            aria-label="비밀번호 보기 전환"
+            tabindex="-1"
+          >
+            {#if showPassword}
+              <EyeOff size={20} />
+            {:else}
+              <Eye size={20} />
+            {/if}
+          </button>
+        </div>
       </div>
 
       <div class="error">

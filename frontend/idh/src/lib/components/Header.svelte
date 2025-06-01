@@ -1,6 +1,13 @@
 <script>
   import { CalendarCheck } from 'lucide-svelte';
   import { goto } from '$app/navigation';
+
+  function handleLogout() {
+  sessionStorage.removeItem('token');
+  sessionStorage.removeItem('userId');
+  goto('/');
+}
+
 </script>
 
 <header class="app-header">
@@ -10,6 +17,7 @@
       <span class="logo-text">AutoPlanner</span>
     </div>
     <nav class="navigation-section">
+      <a class="nav-link" on:click={handleLogout}>로그아웃</a>
       <a class="nav-link" on:click={() => goto('/main')}>메인화면</a>
 
       <!-- ✅ 프로필 이미지 또는 아이콘 영역 -->

@@ -3,6 +3,7 @@
   import { goto } from '$app/navigation';
   import { checkUserExists } from '$lib/api/user';
   import { signupUser } from '$lib/api/user';
+  import { Eye, EyeOff } from 'lucide-svelte'; 
 
   let userId = '';
   let password = '';
@@ -20,8 +21,10 @@
   let passwordInput;
   let confirmPasswordInput;
 
+  let flashMessage = false;
 
-let flashMessage = false;
+  let showPassword = false;       
+  let showConfirmPassword = false;
 
 async function checkDuplicate() {
   if (!userId.trim()) return;
@@ -32,7 +35,7 @@ async function checkDuplicate() {
 
     if (duplicateStatus !== newStatus) {
       flashMessage = true;
-      duplicateStatus = null; // 잠시 숨기기
+      duplicateStatus = null;
       setTimeout(() => {
         duplicateStatus = newStatus;
         flashMessage = false;
@@ -91,17 +94,9 @@ async function checkDuplicate() {
     }
 
     // ✅ 비밀번호 유효성 검사 추가
-    if (!validatePassword(password)) {
-      passwordError = true;
-      passwordTouched = true;
-      modalMessage = '비밀번호 조건을 확인해주세요.';
-      showModal = true;
-      return;
-    }
-
-    if (duplicateStatus !== 'available') {
-      missingField = null;
-      modalMessage = '아이디 중복 확인을 해주세요.';
+    if (password !== confirmPassword) {
+      passwordMismatch = true;
+      modalMessage = '비밀번호가 일치하지 않습니다. 다시 확인해주세요.';
       showModal = true;
       return;
     }
@@ -364,6 +359,48 @@ async function checkDuplicate() {
     margin-top: 1rem;
     cursor: pointer;
   }
+
+  .password-wrapper {
+    position: relative;
+    width: 100%;
+    display: flex;
+    align-items: center;
+  }
+
+  .password-wrapper input {
+    width: 100%;
+    padding: 0.5rem;
+    padding-right: 2.5rem; /* 👈 오른쪽 Eye 버튼 공간 확보 */
+    font-size: 1rem;
+    border-radius: 4px;
+    border: 1.5px solid #222;
+    box-sizing: border-box;
+  }
+
+  .eye-button {
+    position: absolute;
+    top: 50%;
+    right: 0.75rem;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    padding: 0;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #6b7280;
+    box-sizing: border-box;
+  }
+
+  .eye-button :global(svg) {
+    width: 20px !important;
+    height: 20px !important;
+    display: block;
+  }
+
 </style>
 
 <div class="wrapper">
@@ -402,7 +439,7 @@ async function checkDuplicate() {
             <input
               type="text"
               bind:value={userId}
-              bind:this={userIdInput}
+              bind:this={userIdInput}   
               placeholder="아이디를 입력하세요"
               class:duplicate-success={duplicateStatus === 'available'}
               class:duplicate-fail={duplicateStatus === 'unavailable'}
@@ -434,16 +471,31 @@ async function checkDuplicate() {
         <!-- 비밀번호 -->
         <div class="form-group">
           <label>비밀번호</label>
-          <input
-            type="password"
-            bind:value={password}
-            bind:this={passwordInput}
-            placeholder="비밀번호를 입력하세요"
-            on:input={handlePasswordInput}
-            class:error={passwordError && passwordTouched}
-            on:keydown={handleKeydown}
-            autocomplete="new-password"
-          />
+          <div class="password-wrapper">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              bind:value={password}
+              bind:this={passwordInput}
+              placeholder="비밀번호를 입력하세요"
+              on:input={handlePasswordInput}
+              class:error={passwordError && passwordTouched}
+              on:keydown={handleKeydown}
+              autocomplete="new-password"
+            />
+            <button
+              type="button"
+              class="eye-button"
+              on:click={() => (showPassword = !showPassword)}
+              aria-label="비밀번호 보기 전환"
+              tabindex="-1"
+            >
+              {#if showPassword}
+                <EyeOff size={20} />
+              {:else}
+                <Eye size={20} />
+              {/if}
+            </button>
+          </div>
           <div class="msg-area">
             {#if passwordTouched && passwordError}
               <span class="error-message">❗영문 대/소문자, 숫자, 특수문자 조합 8자 이상</span>
@@ -453,25 +505,42 @@ async function checkDuplicate() {
           </div>
         </div>
 
+
         <!-- 비밀번호 확인 -->
         <div class="form-group">
           <label>비밀번호 확인</label>
-          <input
-            type="password"
-            bind:value={confirmPassword}
-            bind:this={confirmPasswordInput}
-            placeholder="비밀번호를 다시 입력하세요"
-            class:confirm-error={passwordMismatch}
-            on:input={handleConfirmInput}
-            on:keydown={handleKeydown}
-            autocomplete="new-password"
-          />
+          <div class="password-wrapper">
+            <input
+              type={showConfirmPassword ? 'text' : 'password'}
+              bind:value={confirmPassword}
+              bind:this={confirmPasswordInput}
+              placeholder="비밀번호를 다시 입력하세요"
+              class:confirm-error={passwordMismatch}
+              on:input={handleConfirmInput}
+              on:keydown={handleKeydown}
+              autocomplete="new-password"
+            />
+            <button
+              type="button"
+              class="eye-button"
+              on:click={() => (showConfirmPassword = !showConfirmPassword)}
+              aria-label="비밀번호 확인 보기 전환"
+              tabindex="-1"
+            >
+              {#if showConfirmPassword}
+                <EyeOff size={20} />
+              {:else}
+                <Eye size={20} />
+              {/if}
+            </button>
+          </div>
           <div class="msg-area">
             <span class="error-message {passwordMismatch ? '' : 'hidden'}">
               {passwordMismatch ? '❗비밀번호가 일치하지 않습니다' : ''}
             </span>
           </div>
         </div>
+
       </div>
 
       <div>

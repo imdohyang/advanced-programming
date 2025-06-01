@@ -36,13 +36,7 @@ let ExamService = class ExamService {
                 endDate: new Date(exam.endDate),
                 importance: exam.importance,
                 userId: user.id,
-                chapters: {
-                    create: exam.chapters.map((ch) => ({
-                        chapterTitle: ch.chapterTitle,
-                        difficulty: String(ch.difficulty),
-                        contentVolume: Number(ch.contentVolume),
-                    })),
-                },
+                chapters: {},
             },
             include: { chapters: true },
         });

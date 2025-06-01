@@ -12,12 +12,29 @@ import { Logger } from '@nestjs/common';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  // ✅ 1. 로그인 (JWT 발급)
   @Post('login')
-  @ApiOperation({ summary: '로그인 및 JWT 발급' })
-  login(@Body() dto: LoginDto) {
-    return this.authService.login(dto);
+  @ApiOperation({ summary: '로그인 및 JWT 쿠키 발급' })
+  async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
+    const { access_token } = await this.authService.login(dto);
+
+    res.cookie('access_token', access_token, {
+      httpOnly: true,
+      // secure: false, // 로컬에서는 false
+      secure: true, // HTTPS 배포 시
+      sameSite: 'lax',
+    });
+
+    return access_token;
   }
+
+  // // ✅ 1. 로그인 (JWT 발급)
+  // @Post('login')
+  // @ApiOperation({ summary: '로그인 및 JWT 발급' })
+  // login(@Body() dto: LoginDto) {
+  //   return this.authService.login(dto);
+  // }
+
+
 
   // ✅ 2. Notion OAuth 인증 리다이렉트
   @Get('notion/redirect')

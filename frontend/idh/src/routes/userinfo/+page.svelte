@@ -4,13 +4,21 @@
   import { onMount } from 'svelte';
   import { getUserPreference } from '$lib/api/userPreference';
 
-  let userEmail = 'user123@email.com';
+  let userEmail = '';
   let learningStyle = '';
   let studyDays: string[] = [];
   let studySessions = 0;
 
   onMount(async () => {
-    const userId = 'user123';
+    const userId = localStorage.getItem('userId');
+    if (!userId) {
+      alert('로그인이 필요합니다.');
+      window.location.href = '/';
+      return;
+    }
+
+    userEmail = `${userId}@email.com`;
+
     try {
       const res = await getUserPreference(userId);
       learningStyle = res.style === 'focus' ? '하루 한 과목 집중' : '여러 과목 병행';
@@ -21,6 +29,7 @@
     }
   });
 </script>
+
 
 <div class="page-wrapper">
   <Header />

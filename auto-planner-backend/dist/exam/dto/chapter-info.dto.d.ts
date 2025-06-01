@@ -1,5 +1,5 @@
 export declare class ChapterInfoDto {
     chapterTitle: string;
-    difficulty: string;
-    contentVolume: string;
+    difficulty: number;
+    contentVolume: number;
 }

@@ -1,5 +1,6 @@
 // src/lib/api/userpreference.ts
 
+
 export type StudyPreference = {
     style: 'focus' | 'parallel';
     studyDays: string[]; // ['월', '화', ...]

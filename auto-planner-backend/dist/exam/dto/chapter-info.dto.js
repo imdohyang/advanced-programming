@@ -23,10 +23,10 @@ __decorate([
 ], ChapterInfoDto.prototype, "chapterTitle", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({ example: "쉬움", description: '난이도 (쉬움, 보통, 어려움)' }),
-    __metadata("design:type", String)
+    __metadata("design:type", Number)
 ], ChapterInfoDto.prototype, "difficulty", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({ example: 10, description: '내용 분량' }),
-    __metadata("design:type", String)
+    __metadata("design:type", Number)
 ], ChapterInfoDto.prototype, "contentVolume", void 0);
 //# sourceMappingURL=chapter-info.dto.js.map
