@@ -1,9 +1,0 @@
-[build]
-  base    = "frontend/idh"
-  command = "npm run build"
-  publish = ".svelte-kit/output"
-
-[[redirects]]
-  from = "/*"
-  to = "/.netlify/functions/render"
-  status = 200
