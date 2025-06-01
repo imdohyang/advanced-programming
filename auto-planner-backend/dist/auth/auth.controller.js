@@ -31,7 +31,7 @@ let AuthController = class AuthController {
             secure: true,
             sameSite: 'lax',
         });
-        return { success: true };
+        return access_token;
     }
     redirectToNotion(userId, res) {
         const clientId = process.env.NOTION_CLIENT_ID;
