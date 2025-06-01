@@ -26,40 +26,33 @@
   let showPassword = false;       
   let showConfirmPassword = false;
 
-async function checkDuplicate() {
-  if (!userId.trim()) return;
+  async function checkDuplicate() {
+    if (!userId.trim()) return;
 
-  try {
-    const exists = await checkUserExists(userId);
-    const newStatus = exists ? 'unavailable' : 'available';
+    try {
+      const exists = await checkUserExists(userId);
+      const newStatus = exists ? 'unavailable' : 'available';
 
-    if (duplicateStatus !== newStatus) {
-      flashMessage = true;
-      duplicateStatus = null;
-      setTimeout(() => {
-        duplicateStatus = newStatus;
-        flashMessage = false;
-      }, 50); // 깜빡임 효과용 짧은 지연
-    } else {
-      // 동일한 상태일 경우에도 효과 주기
       flashMessage = true;
       duplicateStatus = null;
       setTimeout(() => {
         duplicateStatus = newStatus;
         flashMessage = false;
       }, 50);
+
+    } catch (e) {
+      modalMessage = e.message || '중복 확인 중 오류가 발생했습니다.';
+      showModal = true;
     }
-
-  } catch (e) {
-    modalMessage = e.message || '중복 확인 중 오류가 발생했습니다.';
-    showModal = true;
   }
-}
 
-
-  function validatePassword(pw) {
-    return /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/.test(pw);
-  }
+  // ✅ 클로저로 변경된 validatePassword
+  const validatePassword = (function createPasswordValidator() {
+    const regex = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
+    return function (pw) {
+      return regex.test(pw);
+    };
+  })();
 
   function handlePasswordInput() {
     passwordTouched = true;
@@ -93,26 +86,10 @@ async function checkDuplicate() {
       return;
     }
 
-    // ✅ 비밀번호 유효성 검사 추가
     if (password !== confirmPassword) {
       passwordMismatch = true;
       modalMessage = '비밀번호가 일치하지 않습니다. 다시 확인해주세요.';
       showModal = true;
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      passwordMismatch = true;
-
-      // ✅ 모달로 사용자에게 알림
-      modalMessage = '비밀번호가 일치하지 않습니다. 다시 확인해주세요.';
-      showModal = true;
-
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      passwordMismatch = true;
       return;
     }
 
@@ -126,8 +103,6 @@ async function checkDuplicate() {
     }
   }
 
-
-
   function handleModalConfirm() {
     showModal = false;
     if (missingField === 'userId') userIdInput.focus();
@@ -140,6 +115,7 @@ async function checkDuplicate() {
     if (event.key === 'Enter') handleSignup();
   }
 </script>
+
 
 <style>
   .wrapper {
