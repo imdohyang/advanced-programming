@@ -9,12 +9,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AiModule = void 0;
 const common_1 = require("@nestjs/common");
 const axios_1 = require("@nestjs/axios");
-const ai_planner_service_1 = require("./ai-planner.service");
 const ai_planner_controller_1 = require("./ai-planner.controller");
+const ai_planner_service_1 = require("./ai-planner.service");
+const llm_client_service_1 = require("./server/llm-client.service");
 const user_preference_module_1 = require("../../user-preference/user-preference.module");
 const exam_module_1 = require("../../exam/exam.module");
 const notion_module_1 = require("../../notion/notion.module");
-const llm_client_service_1 = require("./server/llm-client.service");
+const prisma_service_1 = require("../../prisma/prisma.service");
 let AiModule = class AiModule {
 };
 exports.AiModule = AiModule;
@@ -27,8 +28,12 @@ exports.AiModule = AiModule = __decorate([
             notion_module_1.NotionModule,
         ],
         controllers: [ai_planner_controller_1.AiPlannerController],
-        providers: [ai_planner_service_1.AiPlannerService, llm_client_service_1.LlmClientService],
-        exports: [ai_planner_service_1.AiPlannerService]
+        providers: [
+            ai_planner_service_1.AiPlannerService,
+            llm_client_service_1.LlmClientService,
+            prisma_service_1.PrismaService,
+        ],
+        exports: [ai_planner_service_1.AiPlannerService],
     })
 ], AiModule);
 //# sourceMappingURL=ai.module.js.map

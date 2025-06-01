@@ -1,99 +1,101 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { UserPreferenceService } from '../../user-preference/user-preference.service';
-import { ExamService } from '../../exam/exam.service';
-import { getToken } from 'src/auth/notion-token.store';
-import axios from 'axios';
+import { PrismaService } from '../../prisma/prisma.service';
+import { LlmClientService } from './server/llm-client.service';
+import { format } from 'date-fns';
+import { extractJsonBlock } from './utils/json-utils';
 
 @Injectable()
 export class AiPlannerService {
   constructor(
-    private readonly configService: ConfigService,
-    private readonly userPreferenceService: UserPreferenceService,
-    private readonly examService: ExamService,
+    private readonly prisma: PrismaService,
+    private readonly llmClient: LlmClientService,
   ) {}
 
-  async generateStudyPlan(userId: string, databaseIdOverride?: string): Promise<any[]> {
-    const token = getToken(userId);
-    if (!token) {
-      throw new InternalServerErrorException(`❌ Notion 토큰 없음: userId=${userId}`);
+  async generateStudyPlan(userId: string, databaseId?: string): Promise<any[]> {
+    const user = await this.prisma.user.findUnique({
+      where: { userId },
+      include: {
+        preference: true,
+        exams: {
+          include: { chapters: true },
+        },
+      },
+    });
+
+    if (!user || !user.preference || user.exams.length === 0) {
+      throw new InternalServerErrorException('[❌ 사용자 정보 부케]');
     }
 
-    const userWithPref = await this.userPreferenceService.findByUserId(userId);
-    const userWithExams = await this.examService.findByUser(userId);
+    const prompt = this.createPromptFromUserData(user);
+    const llmRawResponse = await this.llmClient.generateSummary(prompt);
 
-    const preference = userWithPref;
-    const exams = userWithExams?.exams;
-
-    if (!preference || !exams || exams.length === 0) {
-      throw new InternalServerErrorException('❌ 사용자 설정 또는 시험 정보 없음');
+    let parsed = [];
+    try {
+      const jsonOnly = extractJsonBlock(llmRawResponse);
+      parsed = JSON.parse(jsonOnly);
+    } catch (err) {
+      console.error('[❌ JSON 파싱 실패]', llmRawResponse);
+      throw new InternalServerErrorException('LLM 응답 JSON 파싱 실패');
     }
 
-    const databaseId = databaseIdOverride || this.configService.get<string>('DATABASE_ID') || 'notion-db-id';
-    const prompt = this.buildPrompt(exams, preference);
-    const llmDailyPlans = await this.callLlamaAPI(prompt);
-
-    const result = exams.map((exam, idx) => ({
+    const resultWithMeta = parsed.map(plan => ({
+      ...plan,
       userId,
-      subject: exam.subject,
-      startDate: exam.startDate.toISOString().split('T')[0],
-      endDate: exam.endDate.toISOString().split('T')[0],
       databaseId,
-      dailyPlan: llmDailyPlans[idx]?.dailyPlan || [],
     }));
 
-    return result;
+    return resultWithMeta;
   }
 
-  private buildPrompt(exams: any[], preference: any): string {
-    return `
-너는 AI 학습 플래너야. 아래 정보를 바탕으로 각 과목별 학습 일정을 JSON 형식으로 작성해줘. 각 과목은 다음 형식을 따라야 해:
+  private createPromptFromUserData(user: any): string {
+    const { preference, exams } = user;
+    const studyDays = preference.studyDays.join(', ');
+    const style = preference.style;
+    const sessions = preference.sessionsPerDay;
 
-출력 예시:
+    const examStr = exams
+      .map(exam => {
+        const chapters = exam.chapters
+          .map(c => `    - ${c.chapterTitle} (${c.difficulty}, ${c.contentVolume}p)`)
+          .join('\n');
+
+        return `과목: ${exam.subject}\n기간: ${format(exam.startDate, 'yyyy-MM-dd')} ~ ${format(exam.endDate, 'yyyy-MM-dd')} (마지막 날은 시험일입니다)\n중요도: ${exam.importance}\n챕터:\n${chapters}`;
+      })
+      .join('\n\n');
+
+    return `
+너는 AI 기반 학습 스케줄러야. 사용자 선호도와 시험 정보를 기반으로 하루 단위 학습 계획을 짜.
+
+✅ 사용자 선호도:
+- 스타일: ${style}
+- 요일: ${studyDays}
+- 세션 수: ${sessions}
+
+✅ 시험 정보:
+${examStr}
+
+[응답 형식 예시]
 [
-  { "dailyPlan": ["6/1: Chapter 1 (p.1-10)", "6/2: Chapter 2 (p.11-20)"] },
-  { "dailyPlan": ["6/1: Chapter A (p.1-5)", "6/2: Chapter B (p.6-10)"] },
-  ...
+  {
+    "subject": "의료기기인허가",
+    "startDate": "2025-05-23",
+    "endDate": "2025-06-16",
+    "dailyPlan": [
+      "6/1: Chapter 1 (p.1-10)",
+      "6/2: Chapter 2 (p.11-30)"
+    ]
+  }
 ]
 
 제약 조건:
-- exam.importance가 높을수록 학습 우선순위를 높여줘. (즉, Notion 캘린더 상위에 위치할 과목으로 간주)
-- chapter.difficulty가 높을수록 하루에 적은 분량(페이지 수)을 할당해줘 (어려운 챕터는 나눠서 진행)
-- preference.style이 "multi"이면 하루에 여러 과목을 섞어서 공부할 수 있어
-- preference.style이 "focus"이면 하루에 한 과목만 집중해서 공부해야 해
-- preference.sessionsPerDay는 하루 최대 공부 세션 수를 의미해 (multi일 때 하루 최대 과목 수)
-- preference.studyDays는 사용자가 공부 가능한 요일이야 (예: ["월", "화", "수", "목", "금"])
+- exam.importance가 높을수록 학습 우선순위를 높여줘.
+- chapter.difficulty가 높을수록 하루에 적은 분량(페이지 수)을 할당해줘.
+- preference.style이 "multi"이면 하루에 여러 과목을 섞어서 공부할 수 있어.
+- preference.style이 "focus"이면 하루에 한 과목만 집중해서 공부해야 해.
+- preference.sessionsPerDay는 하루 최대 공부 세션 수를 의미해.
+- preference.studyDays는 사용자가 공부 가능한 요일이야 (예: ["월", "화", "수", "목", "금"]).
 
-시험 정보: ${JSON.stringify(exams, null, 2)}
-사용자 선호도: ${JSON.stringify(preference, null, 2)}
+위 형식만 따르고, JSON 배열만 출력해.
     `.trim();
-  }
-
-  private async callLlamaAPI(prompt: string): Promise<any[]> {
-    const response = await axios.post(
-      'http://10.125.208.217:9241/v1/completions',
-      {
-        model: 'llama-70b',
-        prompt,
-        temperature: 0.7,
-        max_tokens: 2048
-      },
-      {
-        headers: {
-          'Authorization': `Bearer dummy-api-key`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    const text = response.data.choices?.[0]?.text || '';
-    const jsonMatch = text.match(/\[.*\]/s);
-    
-
-    if (!jsonMatch) {
-      throw new Error('❌ JSON 응답 파싱 실패');
-    }
-
-    return JSON.parse(jsonMatch[0]);
   }
 }
