@@ -86,7 +86,7 @@ async function bootstrap() {
 
   // ✅ CORS 설정 (프론트 도메인 + credentials 허용)
   app.enableCors({
-    origin: ['http://localhost:5173', 'https://advanced-programming.onrender.com', 'http://localhost:5174', 'https://soft-pie-51c3bf.netlify.app/'],
+    origin: ['http://localhost:5173', 'https://advanced-programming.onrender.com', 'http://localhost:5174', 'https://soft-pie-51c3bf.netlify.app/', 'https://auto-planner.netlify.app/'],
     credentials: true,
   });
 
