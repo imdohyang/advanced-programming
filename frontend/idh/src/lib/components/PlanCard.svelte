@@ -1,6 +1,6 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import { getUserPreference } from '$lib/api/userpreference';
+  import { getUserPreference } from '$lib/api/userPreference';
 
   export let userId: string;
 
