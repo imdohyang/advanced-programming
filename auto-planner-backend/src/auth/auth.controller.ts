@@ -15,7 +15,7 @@ export class AuthController {
   @Post('login')
   @ApiOperation({ summary: '로그인 및 JWT 쿠키 발급' })
   async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
-    const { access_token } = await this.authService.login(dto);
+    const { access_token, user } = await this.authService.login(dto);
 
     res.cookie('access_token', access_token, {
       httpOnly: true,
@@ -24,7 +24,7 @@ export class AuthController {
       sameSite: 'lax',
     });
 
-    return access_token;
+    return user;
   }
 
   // // ✅ 1. 로그인 (JWT 발급)

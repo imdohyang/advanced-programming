@@ -43,7 +43,7 @@ export class AuthService {
   };
 
   return {
-    access_token: this.jwtService.sign(payload),
+    access_token: this.jwtService.sign(payload), user
     // userId: user.userId, // 이 라인 추가 방식으로 수정
   };
 }
