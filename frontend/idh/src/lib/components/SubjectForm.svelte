@@ -118,7 +118,7 @@
     {#each subjectData.units as unit, i (i)}
       <div class="unit-entry">
         <input type="text" placeholder="단원명" bind:value={unit.unitName} on:input={(e) => handleUnitChange(i, 'unitName', e.target.value)} class="unit-input" />
-        <input type="text" placeholder="학습량" bind:value={unit.studyAmount} on:input={(e) => handleUnitChange(i, 'studyAmount', e.target.value)} class="unit-input" />
+        <input type="text" placeholder="페이지" bind:value={unit.studyAmount} on:input={(e) => handleUnitChange(i, 'studyAmount', e.target.value)} class="unit-input" />
         <select bind:value={unit.difficulty} on:change={(e) => handleUnitChange(i, 'difficulty', e.target.value)} class="unit-select">
           {#each difficultyOptions as option}
             <option value={option}>{option}</option>

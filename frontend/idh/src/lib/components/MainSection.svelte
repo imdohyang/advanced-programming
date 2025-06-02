@@ -3,6 +3,7 @@
   import { saveUserPreference, getUserPreference } from '$lib/api/userPreference';
   import { user } from '$lib/stores/user';
   import { get } from 'svelte/store';
+  import { goto } from '$app/navigation';
 
   let userId = '';
   let learningStyle: 'focus' | 'parallel' = 'focus';
@@ -69,9 +70,9 @@
     };
 
     try {
-      await saveUserPreference(userId, body);
+      await saveUserPreference(body);
       alert('✅ 설정이 저장되었습니다!');
-      window.location.href = '/userinfo';
+      await goto('/userinfo');
     } catch (err) {
       console.error(err);
       alert('⚠️ 설정 저장 실패!');
@@ -128,7 +129,7 @@
         </div>
       </div>
 
-      <button type="submit" class="save-button" on:click={handleSubmit}>설정 저장</button>
+      <button type="submit" class="save-button">설정 저장</button>
     </form>
   </div>
 </section>
