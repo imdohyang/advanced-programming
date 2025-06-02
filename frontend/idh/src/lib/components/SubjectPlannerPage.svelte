@@ -3,15 +3,17 @@
   import Header from '$lib/components/Header.svelte';
   import SubjectForm from '$lib/components/SubjectForm.svelte';
   import { deleteAllExams } from '$lib/api/exam';
-  import { checkNotionConnected } from '$lib/api/notion';
   import { confirmPlan } from '$lib/api/confirm';
   import { goto } from '$app/navigation';
+  import { generatePlan } from '$lib/api/ai-planner';
+  import { user } from '$lib/stores/user';
+  import { get } from 'svelte/store';
 
-  const token = sessionStorage.getItem('token');
-  const userId = sessionStorage.getItem('userId');
 
   let subjects = [];
-  
+  let userId = '';
+  let token = '';
+
 
   function extractDatabaseId(input: string): string | null {
     try {
@@ -24,6 +26,16 @@
   }
 
   onMount(async () => {
+    const u = get(user);
+    console.log('[DEBUG] userId:', userId);
+    if (!u?.userId) {
+      alert('로그인이 필요합니다.');
+      goto('/');
+      return;
+    }
+
+    userId = u.userId;
+    token = u.token;
     try {
       const res = await fetch(`https://advanced-programming.onrender.com/exam/${userId}`);
       if (!res.ok) throw new Error('과목 정보 불러오기 실패');
@@ -102,30 +114,31 @@
         return;
       }
 
-      for (const subject of subjects) {
-        const payload = {
-          userId,
-          subject: '고급 프로그래밍',
-          startDate: '2025-06-01',
-          endDate:'2025-06-15',
-          dailyPlan: [
-            "6/1: Chapter 1",
-            "6/2: Chapter 2"
-          ],
-          databaseId
-        };
+      // ✅ 학습 계획 생성 + 저장
+      const plans = await generatePlan(userId, databaseId);
 
-        await confirmPlan(userId, payload);
+      // ✅ Notion confirm API 전송
+      for (const plan of plans) {
+        await confirmPlan(userId, {
+          userId,
+          subject: plan.subject,
+          startDate: plan.startDate,
+          endDate: plan.endDate,
+          dailyPlan: plan.dailyPlan,
+          databaseId,
+        });
       }
 
-      alert('✅ 노션에 학습 계획이 성공적으로 전송되었습니다.');
+      alert('✅ 학습 계획 생성 및 노션 연동 완료!');
       goto('/main');
 
     } catch (err) {
-      alert('❗ 노션 연동이 필요합니다. 메인 화면에서 연동을 먼저 진행해주세요.');
+      console.error(err);
+      alert('❗ 노션 연동이 필요합니다. 메인 화면으로 이동합니다.');
       goto('/main');
     }
   }
+
 
 </script>
 
