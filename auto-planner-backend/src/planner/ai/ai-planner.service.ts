@@ -48,18 +48,6 @@ export class AiPlannerService {
       throw new InternalServerErrorException('LLM 응답 JSON 파싱 실패');
     }
 
-<<<<<<< HEAD
-    const resultWithMeta = parsed.map(plan => ({
-      userId,
-      subject: plan.subject,
-      startDate: plan.startDate,
-      endDate: plan.endDate,
-      dailyPlan: plan.dailyPlan,
-      databaseId,
-    }));
-    return resultWithMeta;
-=======
-    // ✅ 생성한 계획 바로 저장
     await this.saveStudyPlans(
       parsed.map(plan => ({
         userId,
@@ -72,7 +60,7 @@ export class AiPlannerService {
     );
 
     return parsed; // 저장 성공 후 결과 반환
->>>>>>> 1e644592 (feat: ai-planner database)
+
   }
 
   // ✅ 2. 저장 함수
