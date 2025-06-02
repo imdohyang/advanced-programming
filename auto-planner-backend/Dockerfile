@@ -14,6 +14,6 @@ COPY --from=builder /app /app
 RUN npm install --omit=dev
 
 ENV NODE_ENV=production
-ENV PORT=3000
+#ENV PORT=3000
 
 CMD ["npm", "run", "start:prod"]
