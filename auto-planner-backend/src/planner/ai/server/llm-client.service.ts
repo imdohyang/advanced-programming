@@ -17,6 +17,7 @@ export class LlmClientService {
             prompt,                            // ✅ prompt 방식
             model: 'meta-llama/Llama-3.3-70B-Instruct',  // ✅ 서버에서 확인된 model명
             max_tokens: 1024, // 가능하면최대치로
+
             temperature: 0.7,
           },
           {

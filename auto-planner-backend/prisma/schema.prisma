@@ -24,6 +24,7 @@ model User {
   createdAt         DateTime         @default(now())
   exams             Exam[]
   preference        StudyPreference?
+  studyPlans        StudyPlan[]  
 }
 
 model Exam {
@@ -48,4 +49,23 @@ model Chapter {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   exam          Exam     @relation(fields: [examId], references: [id])
+}
+
+model StudyPlan {
+  id         Int         @id @default(autoincrement())
+  userId     Int
+  user       User        @relation(fields: [userId], references: [id])
+  subject    String
+  startDate  DateTime
+  endDate    DateTime
+  databaseId String
+  dailyPlans DailyPlan[]
+}
+
+model DailyPlan {
+  id          Int         @id @default(autoincrement())
+  date        DateTime
+  content     String
+  studyPlan   StudyPlan   @relation(fields: [studyPlanId], references: [id])
+  studyPlanId Int
 }
