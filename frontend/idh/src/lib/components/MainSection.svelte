@@ -1,6 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { saveUserPreference, getUserPreference } from '$lib/api/userPreference';
+  import { user } from '$lib/stores/user';
+  import { get } from 'svelte/store';
 
   let userId = '';
   let learningStyle: 'focus' | 'parallel' = 'focus';
@@ -12,13 +14,13 @@
 
   // ✅ 초기화 시, 로그인 정보 확인 + 기존 설정 로딩
   onMount(async () => {
-    const storedId = localStorage.getItem('userId');
-    if (!storedId) {
+    const currentUser = get(user);
+    if (!currentUser?.userId) {
       alert('로그인이 필요합니다.');
       window.location.href = '/';
       return;
     }
-    userId = storedId;
+    userId = currentUser.userId;
 
     try {
       const res = await getUserPreference(userId);
