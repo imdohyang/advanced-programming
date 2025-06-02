@@ -22,15 +22,18 @@ let AiPlannerController = class AiPlannerController {
         this.aiPlannerService = aiPlannerService;
     }
     async generatePlan(body) {
-        return await this.aiPlannerService.generateStudyPlan(body.userId, body.databaseId);
+        return await this.aiPlannerService.generateStudyPlanAndSave(body.userId, body.databaseId);
+    }
+    async getStudyPlans(userId) {
+        return await this.aiPlannerService.getStudyPlansByUserId(userId);
     }
 };
 exports.AiPlannerController = AiPlannerController;
 __decorate([
     (0, common_1.Post)('/generate'),
     (0, swagger_1.ApiOperation)({
-        summary: '학습 계획 생성 (LLM 제외)',
-        description: '유저 ID 기반으로 내부 rule engine을 사용하여 학습 계획을 생성하고 Notion에 동기화합니다.',
+        summary: '학습 계획 생성 및 저장',
+        description: '유저 ID 기반으로 LLM을 통해 학습 계획을 생성하고 데이터베이스에 저장합니다.',
     }),
     (0, swagger_1.ApiBody)({
         schema: {
@@ -49,20 +52,18 @@ __decorate([
         },
     }),
     (0, swagger_1.ApiOkResponse)({
-        description: '성공적으로 생성된 학습 계획',
+        description: '성공적으로 생성 및 저장된 학습 계획',
         schema: {
             type: 'array',
             items: {
                 type: 'object',
                 properties: {
-                    subject: { type: 'string', example: '시계열분석' },
-                    startDate: { type: 'string', example: '2025-05-23' },
-                    endDate: { type: 'string', example: '2025-06-11' },
-                    userId: { type: 'string', example: '202255150' },
-                    databaseId: { type: 'string', example: 'notion-db-id' },
+                    subject: { type: 'string', example: '국어' },
+                    startDate: { type: 'string', example: '2025-06-03' },
+                    endDate: { type: 'string', example: '2025-06-05' },
                     dailyPlan: {
                         type: 'array',
-                        items: { type: 'string', example: '6/1: Chapter 1 (p.1-10)' },
+                        items: { type: 'string', example: '6/3: Chapter 1 (p.1-25)' },
                     },
                 },
             },
@@ -73,6 +74,47 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], AiPlannerController.prototype, "generatePlan", null);
+__decorate([
+    (0, common_1.Get)('/list'),
+    (0, swagger_1.ApiOperation)({
+        summary: '유저의 학습 계획 조회',
+        description: '유저 ID로 해당 유저의 모든 학습 계획과 일일 계획(dailyPlans)을 조회합니다.',
+    }),
+    (0, swagger_1.ApiQuery)({
+        name: 'userId',
+        required: true,
+        description: '조회할 유저의 userId (문자열)',
+        example: '202255150',
+    }),
+    (0, swagger_1.ApiOkResponse)({
+        description: '성공적으로 조회된 학습 계획 목록',
+        schema: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    subject: { type: 'string', example: '국어' },
+                    startDate: { type: 'string', example: '2025-06-03' },
+                    endDate: { type: 'string', example: '2025-06-05' },
+                    dailyPlans: {
+                        type: 'array',
+                        items: {
+                            type: 'object',
+                            properties: {
+                                date: { type: 'string', example: '2025-06-03T00:00:00.000Z' },
+                                content: { type: 'string', example: 'Chapter 1 (p.1-25)' },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    }),
+    __param(0, (0, common_1.Query)('userId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AiPlannerController.prototype, "getStudyPlans", null);
 exports.AiPlannerController = AiPlannerController = __decorate([
     (0, swagger_1.ApiTags)('ai-plan'),
     (0, common_1.Controller)('ai-plan'),

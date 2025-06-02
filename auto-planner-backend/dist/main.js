@@ -6,7 +6,7 @@ const swagger_1 = require("@nestjs/swagger");
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
     app.enableCors({
-        origin: ['http://localhost:5173', 'https://advanced-programming.onrender.com', 'http://localhost:5174', 'https://soft-pie-51c3bf.netlify.app/'],
+        origin: ['http://localhost:5173', 'https://advanced-programming.onrender.com', 'http://localhost:5174', 'https://soft-pie-51c3bf.netlify.app/', 'https://auto-planner.netlify.app'],
         credentials: true,
     });
     const config = new swagger_1.DocumentBuilder()

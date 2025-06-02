@@ -25,13 +25,13 @@ let AuthController = class AuthController {
         this.authService = authService;
     }
     async login(dto, res) {
-        const { access_token } = await this.authService.login(dto);
+        const { access_token, user } = await this.authService.login(dto);
         res.cookie('access_token', access_token, {
             httpOnly: true,
             secure: true,
             sameSite: 'lax',
         });
-        return access_token;
+        return user;
     }
     redirectToNotion(userId, res) {
         const clientId = process.env.NOTION_CLIENT_ID;
