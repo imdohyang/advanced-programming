@@ -7,20 +7,13 @@
   import { goto } from '$app/navigation';
   import { generatePlan } from '$lib/api/ai-planner';
   import { user } from '$lib/stores/user';
+  import { get } from 'svelte/store';
 
 
   let subjects = [];
   let userId = '';
   let token = '';
 
-  $user.subscribe(u => {
-    if (u) {
-      userId = u.userId;
-      token = u.token;
-    }
-  });
-
-  
 
   function extractDatabaseId(input: string): string | null {
     try {
@@ -33,6 +26,16 @@
   }
 
   onMount(async () => {
+    const u = get(user);
+    console.log('[DEBUG] userId:', userId);
+    if (!u?.userId) {
+      alert('로그인이 필요합니다.');
+      goto('/');
+      return;
+    }
+
+    userId = u.userId;
+    token = u.token;
     try {
       const res = await fetch(`https://advanced-programming.onrender.com/exam/${userId}`);
       if (!res.ok) throw new Error('과목 정보 불러오기 실패');
