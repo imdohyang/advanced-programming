@@ -4,7 +4,13 @@ import { Response } from 'express';
 export declare class AuthController {
     private readonly authService;
     constructor(authService: AuthService);
-    login(dto: LoginDto, res: Response): Promise<string>;
+    login(dto: LoginDto, res: Response): Promise<{
+        userId: string;
+        password: string;
+        id: number;
+        tokenFreeLogin: boolean;
+        createdAt: Date;
+    }>;
     redirectToNotion(userId: string, res: Response): Response<any, Record<string, any>>;
     handleNotionCallback(code: string, state: string, res: Response): Promise<Response<any, Record<string, any>>>;
 }

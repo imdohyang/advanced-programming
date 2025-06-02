@@ -15,6 +15,13 @@ export declare class AuthService {
     }>;
     login(dto: LoginDto): Promise<{
         access_token: string;
+        user: {
+            userId: string;
+            password: string;
+            id: number;
+            tokenFreeLogin: boolean;
+            createdAt: Date;
+        };
     }>;
     signup(dto: CreateUserDto): Promise<{
         userId: string;
