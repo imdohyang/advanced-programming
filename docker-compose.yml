@@ -1,3 +1,20 @@
+# version: '3.8'
+# services:
+#   postgres:
+#     image: postgres:15
+#     container_name: auto-planner-db
+#     ports:
+#       - "5432:5432"
+#     environment:
+#       POSTGRES_USER: postgres
+#       POSTGRES_PASSWORD: postgres
+#       POSTGRES_DB: ai_planner
+#     volumes:
+#       - postgres_data:/var/lib/postgresql/data
+# volumes:
+#   postgres_data:
+
+
 version: '3.8'
 services:
   postgres:
@@ -11,5 +28,28 @@ services:
       POSTGRES_DB: ai_planner
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./auto-planner-backend
+      dockerfile: Dockerfile
+    container_name: auto-planner-backend
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ai_planner
+    ports:
+      - "4000:4000"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: auto-planner-frontend
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+
 volumes:
   postgres_data:
