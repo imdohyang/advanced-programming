@@ -43,13 +43,13 @@ services:
 
   frontend:
     build:
-      context: ./frontend
+      context: ./frontend/idh
       dockerfile: Dockerfile
     container_name: auto-planner-frontend
     depends_on:
       - backend
     ports:
-      - "3000:3000"
+      - "3001:3000"
 
 volumes:
   postgres_data:
