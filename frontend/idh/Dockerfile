@@ -18,4 +18,4 @@ RUN npm install --omit=dev
 EXPOSE 4173
 ENV NODE_ENV=production
 
-CMD ["npm", "run", "preview"]
+CMD ["npm", "run", "preview"] 
