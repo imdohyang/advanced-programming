@@ -5,18 +5,14 @@ import { get } from 'svelte/store';
  * 특정 사용자의 특정 과목 시험 정보를 서버에서 삭제.
  */
 export async function deleteExam(userId: string, subject: string): Promise<{ message: string }> {
-  const currentUser = get(user);
-  const token = currentUser?.token;
-  if (!token) throw new Error('인증 토큰이 없습니다.');
-
   const encodedSubject = encodeURIComponent(subject);
 
   const res = await fetch(`https://advanced-programming.onrender.com/exam/${userId}/${encodedSubject}`, {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
     },
+    credentials: 'include', // 쿠키 자동 전송
   });
 
   if (!res.ok) {
@@ -31,16 +27,12 @@ export async function deleteExam(userId: string, subject: string): Promise<{ mes
  * 특정 사용자의 시험 정보를 서버에 등록
  */
 export async function createExam(examData: any): Promise<{ message: string }> {
-  const currentUser = get(user);
-  const token = currentUser?.token;
-  if (!token) throw new Error('인증 토큰이 없습니다.');
-
   const res = await fetch(`https://advanced-programming.onrender.com/exam`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
     },
+    credentials: 'include', // 쿠키 자동 전송
     body: JSON.stringify(examData),
   });
 
@@ -53,7 +45,9 @@ export async function createExam(examData: any): Promise<{ message: string }> {
 }
 
 export async function isSubjectNameDuplicate(userId: string, subjectName: string): Promise<boolean> {
-  const res = await fetch(`https://advanced-programming.onrender.com/exam/${userId}`);
+  const res = await fetch(`https://advanced-programming.onrender.com/exam/${userId}`, {
+    credentials: 'include', // 쿠키 자동 전송
+  });
   
   if (!res.ok) {
     throw new Error('시험 정보 조회 실패');
@@ -66,16 +60,12 @@ export async function isSubjectNameDuplicate(userId: string, subjectName: string
 }
 
 export async function deleteAllExams(userId: string): Promise<{ message: string }> {
-  const currentUser = get(user);
-  const token = currentUser?.token;
-  if (!token) throw new Error('인증 토큰이 없습니다.');
-
   const res = await fetch(`https://advanced-programming.onrender.com/exam/${userId}`, {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
     },
+    credentials: 'include', // 쿠키 자동 전송
   });
 
   if (!res.ok) {
