@@ -2,9 +2,11 @@ FROM node:18 AS builder
 
 WORKDIR /app
 COPY package*.json ./
+COPY .env .env
 RUN npm install
 COPY . .
 RUN npm run build
+RUN npx prisma generate
 
 FROM node:18
 WORKDIR /app
