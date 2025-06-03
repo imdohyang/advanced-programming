@@ -113,7 +113,7 @@
       goto('/main');
     } catch (err) {
       console.error('[❌ 연동 실패]', err);
-      alert('❗ 연동 중 오류 발생! 메인으로 돌아갑니다.');
+      alert('❗ 노션 연동에 실패했습니다. 다시 시도해주세요.');
       goto('/main');
     }
   }
