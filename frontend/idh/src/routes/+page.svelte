@@ -17,7 +17,7 @@
       goto('/main');
     } catch (e) {
       loginError = true;
-      errorMessage = e.message || '로그인에 실패했습니다.';
+      errorMessage = e.message || '로그인에 실패했습니다.'; 
       userId = '';
       password = '';
       userIdInput?.focus();
