@@ -33,40 +33,48 @@
 //   }
 // }
 
-export async function confirmStudyPlansFromList(studyPlans: any[]) {
-  for (const plan of studyPlans) {
-    const payload = {
-      userId: String(plan.userId), // 백엔드에서 문자열로 받는 경우 문자열로 캐스팅
+export async function confirmAllPlansFromList(userId: string): Promise<void> {
+  // 1. GET으로 유저 계획 리스트 불러오기
+  const res = await fetch(`https://advanced-programming.onrender.com/ai-plan/list?userId=${userId}`, {
+    credentials: 'include',
+  });
+
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(msg || '학습 계획 불러오기 실패');
+  }
+
+  const plans = await res.json();
+
+  // 2. 각 plan을 순회하며 /planner/{id}/confirm POST 요청
+  for (const plan of plans) {
+    const confirmPayload = {
+      userId: String(userId),
       subject: plan.subject,
-      startDate: plan.startDate.slice(0, 10),
+      startDate: plan.startDate.slice(0, 10), // YYYY-MM-DD
       endDate: plan.endDate.slice(0, 10),
-      dailyPlan: plan.dailyPlans.map((dp: any) => {
-        const date = new Date(dp.date);
+      databaseId: plan.databaseId,
+      dailyPlan: plan.dailyPlans.map((d: any) => {
+        const date = new Date(d.date);
         const month = date.getMonth() + 1;
         const day = date.getDate();
-        return `${month}/${day}: ${dp.content}`;
+        return `${month}/${day}: ${d.content}`;
       }),
-      databaseId: plan.databaseId,
     };
 
-    try {
-      const res = await fetch(`https://advanced-programming.onrender.com/planner/${plan.id}/confirm`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include', // ✅ HttpOnly 쿠키를 사용한 인증
-        body: JSON.stringify(payload),
-      });
+    const postRes = await fetch(`https://advanced-programming.onrender.com/planner/${plan.id}/confirm`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(confirmPayload),
+    });
 
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(`❌ Confirm 실패 (ID: ${plan.id}): ${errorText}`);
-      }
-
-      console.log(`✅ Confirm 완료 (ID: ${plan.id})`);
-    } catch (err) {
-      console.error(err);
+    if (!postRes.ok) {
+      const errMsg = await postRes.text();
+      console.error(`[❌ FAIL] confirm 실패 - planId=${plan.id}: ${errMsg}`);
+      throw new Error(`confirm 실패: ${errMsg}`);
     }
+
+    console.log(`[✅ SUCCESS] planId=${plan.id} confirm 완료`);
   }
 }
