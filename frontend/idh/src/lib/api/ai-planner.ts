@@ -20,4 +20,3 @@ export async function getStudyPlans(userId: string): Promise<any[]> {
     throw new Error('❌ 학습 계획 가져오기 중 오류 발생');
   }
 }
-``
