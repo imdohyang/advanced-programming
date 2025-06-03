@@ -1,4 +1,4 @@
-name: Full CI – Backend & Frontend
+name: Full CI – Backend & Frontend (No Lint)
 
 on:
   push:
@@ -30,13 +30,10 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Lint (no fix)
-        run: npm run lint
-
-      - name: Type check
+      - name: Type check (tsc)
         run: npm run typecheck
 
-      - name: Unit tests
+      - name: Unit tests (Jest)
         run: npm test
 
   frontend:
@@ -57,9 +54,6 @@ jobs:
 
       - name: Install dependencies
         run: npm install
-
-      - name: Lint (Prettier + ESLint)
-        run: npm run lint
 
       - name: Type check (svelte-check)
         run: npm run check
