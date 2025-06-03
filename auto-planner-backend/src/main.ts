@@ -76,13 +76,13 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { saveToken } from './auth/notion-token.store';
-//import * as cookieParser from 'cookie-parser'; // ✅ 추가
+import * as cookieParser from 'cookie-parser'; // ✅ 추가 -> 다시 주석처리(테스트)
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // ✅ 쿠키 파서 등록
-  //app.use(cookieParser());
+  app.use(cookieParser()); // -> 다시 주석처리(테스트)
 
   // ✅ CORS 설정 (프론트 도메인 + credentials 허용)
   app.enableCors({

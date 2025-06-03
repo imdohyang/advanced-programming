@@ -62,7 +62,7 @@ export async function confirmAllPlansFromList(userId: string): Promise<void> {
       }),
     };
 
-    const postRes = await fetch(`https://advanced-programming.onrender.com/planner/${plan.id}/confirm`, {
+    const postRes = await fetch(`https://advanced-programming.onrender.com/planner/${userId}/confirm`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
