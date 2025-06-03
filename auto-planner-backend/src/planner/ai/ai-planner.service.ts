@@ -5,7 +5,7 @@ import { format } from 'date-fns';
 import { extractJsonBlock } from './utils/json-utils';
 import { getValidStudyDates } from './utils/date-utils';
 import { log } from 'console';
-
+import { Prisma } from '@prisma/client'; 
 @Injectable()
 export class AiPlannerService {
   constructor(
@@ -13,65 +13,87 @@ export class AiPlannerService {
     private readonly llmClient: LlmClientService,
   ) {}
 
-  // ✅ 1. 계획 생성 + 저장 한방에
-  async generateStudyPlanAndSave(userId: string, databaseId?: string): Promise<any[]> {
-    const user = await this.prisma.user.findUnique({
-      where: { userId },
-      include: {
-        preference: true,
-        exams: {
-          include: { chapters: true },
-        },
-      },
-    });
-
-    if (!user || !user.preference || user.exams.length === 0) {
-      throw new InternalServerErrorException('[❌ 사용자 정보 부케]');
-    }
-
-    const prompt = this.createPromptFromUserData(user);
-
-    // 📌 LLM 호출 직전 로그
-    console.log('[📡 LLM 호출 시도] 프롬프트 길이:', prompt.length);
-    console.log('[📡 프롬프트 내용]', prompt.slice(0, 300), '...');
-
-    const llmRawResponse = await this.llmClient.generateSummary(prompt);
-
-    console.log('[📩 LLM 응답 수신]', llmRawResponse.slice(0, 500));
-
-    interface LlmPlan {
-      subject: string;
-      startDate: string;
-      endDate: string;
-      dailyPlan: string[];
-    }
-
-    let parsed: LlmPlan[];
-    try {
-      const jsonOnly = extractJsonBlock(llmRawResponse);
-      parsed = JSON.parse(jsonOnly);
-    } catch (err) {
-      console.error('[❌ JSON 파싱 실패]', llmRawResponse);
-      throw new InternalServerErrorException('LLM 응답 JSON 파싱 실패');
-    }
-
-    await this.saveStudyPlans(
-      parsed.map(plan => ({
-        userId,
-        subject: plan.subject,
-        startDate: plan.startDate,
-        endDate: plan.endDate,
-        dailyPlan: plan.dailyPlan,
-        databaseId,
-      })),
-    );
-
-    return parsed; // 저장 성공 후 결과 반환
-
+  // ✅ 여러 JSON 블록 추출 함수 추가
+  private extractAllJsonBlocks(text: string): string[] {
+    const regex = /\[\s*{[\s\S]*?}\s*\]/g;
+    const matches = text.match(regex);
+    return matches || [];
   }
 
-  // ✅ 2. 저장 함수
+  // ✅ 계획 생성 + 저장
+async generateStudyPlanAndSave(userId: string, databaseId?: string): Promise<any[]> {
+  const user = await this.prisma.user.findUnique({
+    where: { userId },
+    include: {
+      preference: true,
+      exams: { include: { chapters: true } },
+    },
+  });
+
+  if (!user || !user.preference || user.exams.length === 0) {
+    throw new InternalServerErrorException('[❌ 사용자 정보 부케]');
+  }
+
+  const prompt = this.createPromptFromUserData(user);
+  const llmRawResponse = await this.llmClient.generateSummary(prompt);
+
+  interface LlmPlan {
+    subject: string;
+    startDate: string;
+    endDate: string;
+    dailyPlan: string[];
+  }
+
+  let parsed: LlmPlan[];
+  try {
+    const jsonBlocks = this.extractAllJsonBlocks(llmRawResponse);
+    if (jsonBlocks.length === 0) {
+      throw new Error('No valid JSON found');
+    }
+    parsed = jsonBlocks.flatMap(block => JSON.parse(block));
+  } catch (err) {
+    console.error('[❌ JSON 파싱 실패]', llmRawResponse);
+    throw new InternalServerErrorException('LLM 응답 JSON 파싱 실패');
+  }
+
+  // 📚 Step 1: DB 등록 과목 가져오기
+  const exams = await this.prisma.exam.findMany({
+    where: { userId: user.id },
+    select: { subject: true },
+  });
+  const registeredSubjects = new Set(exams.map((exam) => exam.subject));
+
+  // 📚 Step 2: LLM Plan 필터링 (DB 등록 과목만, 중복 제거)
+  const uniquePlans = new Map();
+  for (const plan of parsed) {
+    if (!registeredSubjects.has(plan.subject)) {
+      continue;  // DB에 없는 과목 버림
+    }
+    if (!uniquePlans.has(plan.subject)) {
+      uniquePlans.set(plan.subject, plan);  // 과목명 중복 제거
+    }
+  }
+
+  // 📚 Step 3: 저장
+  await this.saveStudyPlans(
+    Array.from(uniquePlans.values()).map(plan => ({
+      userId,
+      subject: plan.subject,
+      startDate: plan.startDate,
+      endDate: plan.endDate,
+      dailyPlan: plan.dailyPlan,
+      databaseId,
+    })),
+  );
+
+  return Array.from(uniquePlans.values());  // 저장 성공 후 결과 반환
+}
+
+
+  // ✅ StudyPlan + DailyPlan nested create
   private async saveStudyPlans(parsedPlans: any[]) {
+    const createPlans: Prisma.PrismaPromise<any>[] = [];  // ✅ 여기!
+
     for (const plan of parsedPlans) {
       const { userId: userCode, subject, startDate, endDate, dailyPlan, databaseId } = plan;
 
@@ -83,42 +105,41 @@ export class AiPlannerService {
         throw new Error(`User with userId ${userCode} not found`);
       }
 
-      await this.prisma.$transaction(async (prisma) => {
-        const createdStudyPlan = await prisma.studyPlan.create({
-          data: {
-            userId: user.id,
-            subject,
-            startDate: new Date(startDate),
-            endDate: new Date(endDate),
-            databaseId,
+      const studyPlanCreate = this.prisma.studyPlan.create({
+        data: {
+          userId: user.id,
+          subject,
+          startDate: new Date(startDate),
+          endDate: new Date(endDate),
+          databaseId,
+          dailyPlans: {
+            create: dailyPlan.map((dayPlan: string) => {
+              if (!dayPlan.includes(':')) {
+                throw new Error(`Invalid dailyPlan format: ${dayPlan}`);
+              }
+              const [dateStr, ...contentParts] = dayPlan.split(':');
+              const content = contentParts.join(':').trim();
+              const [month, day] = dateStr.split('/').map(Number);
+              const year = new Date(startDate).getFullYear();
+              const date = new Date(year, month - 1, day);
+
+              return {
+                date,
+                content,
+              };
+            }),
           },
-        });
-
-        for (const dayPlan of dailyPlan) {
-          if (!dayPlan.includes(':')) {
-            throw new Error(`Invalid dailyPlan format: ${dayPlan}`);
-          }
-          const [dateStr, ...contentParts] = dayPlan.split(':');
-          const content = contentParts.join(':').trim();
-          const [month, day] = dateStr.split('/').map(Number);
-          const year = new Date(startDate).getFullYear();
-          const date = new Date(year, month - 1, day);
-
-          await prisma.dailyPlan.create({
-            data: {
-              date,
-              content,
-              studyPlanId: createdStudyPlan.id,
-            },
-          });
-
-          console.log(`✅ 저장된 DailyPlan: ${date.toISOString()} - ${content}`);
-        }
+        },
       });
+
+      createPlans.push(studyPlanCreate);
     }
+
+    await this.prisma.$transaction(createPlans);
 
     console.log('✅ 모든 StudyPlan과 DailyPlan 저장 완료');
   }
+
 
   // ✅ 3. 조회 함수
   async getStudyPlansByUserId(userId: string) {
