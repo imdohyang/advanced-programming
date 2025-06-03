@@ -53,6 +53,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       // 쿠키에서 JWT를 추출하기 위해 ExtractJwt.fromExtractors 사용
       jwtFromRequest: ExtractJwt.fromExtractors([
         (req: Request) => {
+          console.log('🔥 쿠키:', req.cookies);
           return req?.cookies?.access_token || null;
         }
       ]), // 쿠키에서 access_token 추출
