@@ -21,8 +21,8 @@ export class AuthController {
       httpOnly: true,
       // secure: false, // 로컬에서는 false
       secure: true, // HTTPS 배포 시
-      sameSite: 'lax',
-      // sameSite: 'none', // CORS 요청 허용
+      // sameSite: 'lax',
+      sameSite: 'none', // CORS 요청 허용
     });
 
     return access_token;
