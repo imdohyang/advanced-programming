@@ -1,16 +1,22 @@
-// 학습 계획 생성 API 호출
-export async function generatePlan(userId: string, databaseId: string) {
-  const res = await fetch('https://advanced-programming.onrender.com/ai-plan/generate', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ userId, databaseId }),
-  });
+export async function getStudyPlans(userId: string): Promise<any[]> {
+  try {
+    const res = await fetch(
+      `https://advanced-programming.onrender.com/ai-plan/list?userId=${encodeURIComponent(userId)}`,
+      {
+        method: 'GET',
+        credentials: 'include', // ✅ HttpOnly 쿠키 기반 인증
+      }
+    );
 
-  if (!res.ok) {
-    throw new Error('학습 계획 생성 실패');
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`❌ 학습 계획 조회 실패: ${errorText}`);
+    }
+
+    const data = await res.json();
+    return data;
+  } catch (err) {
+    console.error(err);
+    throw new Error('❌ 학습 계획 가져오기 중 오류 발생');
   }
-
-  return await res.json();
 }
