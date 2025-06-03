@@ -30,7 +30,14 @@ export class AiPlannerService {
     }
 
     const prompt = this.createPromptFromUserData(user);
+
+    // 📌 LLM 호출 직전 로그
+    console.log('[📡 LLM 호출 시도] 프롬프트 길이:', prompt.length);
+    console.log('[📡 프롬프트 내용]', prompt.slice(0, 300), '...');
+
     const llmRawResponse = await this.llmClient.generateSummary(prompt);
+
+    console.log('[📩 LLM 응답 수신]', llmRawResponse.slice(0, 500));
 
     interface LlmPlan {
       subject: string;
