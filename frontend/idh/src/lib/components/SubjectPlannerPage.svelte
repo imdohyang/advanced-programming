@@ -3,12 +3,10 @@
   import Header from '$lib/components/Header.svelte';
   import SubjectForm from '$lib/components/SubjectForm.svelte';
   import { deleteAllExams } from '$lib/api/exam';
-  import { confirmPlan } from '$lib/api/confirm';
   import { goto } from '$app/navigation';
-  import { generatePlan } from '$lib/api/ai-planner';
   import { user } from '$lib/stores/user';
   import { get } from 'svelte/store';
-
+  import { confirmAllPlansFromList } from '$lib/api/confirm';
 
   let subjects = [];
   let userId = '';
@@ -102,39 +100,20 @@
 
   async function handleCreatePlan() {
     try {
-      const input = prompt('📌 노션 데이터베이스 **주소나 ID**를 입력하세요:');
-      if (!input) {
-        alert('❗ 입력이 취소되었습니다.');
+      const u = get(user);
+      if (!u?.userId) {
+        alert('로그인이 필요합니다.');
+        goto('/');
         return;
       }
 
-      const databaseId = extractDatabaseId(input);
-      if (!databaseId) {
-        alert('❗ 유효한 노션 주소 또는 ID가 아닙니다.');
-        return;
-      }
+      await confirmAllPlansFromList(u.userId);
 
-      // ✅ 학습 계획 생성 + 저장
-      const plans = await generatePlan(userId, databaseId);
-
-      // ✅ Notion confirm API 전송
-      for (const plan of plans) {
-        await confirmPlan(userId, {
-          userId,
-          subject: plan.subject,
-          startDate: plan.startDate,
-          endDate: plan.endDate,
-          dailyPlan: plan.dailyPlan,
-          databaseId,
-        });
-      }
-
-      alert('✅ 학습 계획 생성 및 노션 연동 완료!');
+      alert('✅ Prisma → Notion 연동이 완료되었습니다!');
       goto('/main');
-
     } catch (err) {
-      console.error(err);
-      alert('❗ 노션 연동이 필요합니다. 메인 화면으로 이동합니다.');
+      console.error('[❌ 연동 실패]', err);
+      alert('❗ 연동 중 오류 발생! 메인으로 돌아갑니다.');
       goto('/main');
     }
   }
