@@ -6,6 +6,7 @@ import { extractJsonBlock } from './utils/json-utils';
 import { getValidStudyDates } from './utils/date-utils';
 import { log } from 'console';
 import { Prisma } from '@prisma/client'; 
+
 @Injectable()
 export class AiPlannerService {
   constructor(
@@ -21,75 +22,148 @@ export class AiPlannerService {
   }
 
   // ✅ 계획 생성 + 저장
-async generateStudyPlanAndSave(userId: string, databaseId?: string): Promise<any[]> {
-  const user = await this.prisma.user.findUnique({
-    where: { userId },
-    include: {
-      preference: true,
-      exams: { include: { chapters: true } },
-    },
-  });
+  async generateStudyPlanAndSave(userId: string, databaseId?: string): Promise<any[]> {
+    const user = await this.prisma.user.findUnique({
+      where: { userId },
+      include: {
+        preference: true,
+        exams: { include: { chapters: true } },
+      },
+    });
 
-  if (!user || !user.preference || user.exams.length === 0) {
-    throw new InternalServerErrorException('[❌ 사용자 정보 부케]');
-  }
-
-  const prompt = this.createPromptFromUserData(user);
-  const llmRawResponse = await this.llmClient.generateSummary(prompt);
-
-  interface LlmPlan {
-    subject: string;
-    startDate: string;
-    endDate: string;
-    dailyPlan: string[];
-  }
-
-  let parsed: LlmPlan[];
-  try {
-    const jsonBlocks = this.extractAllJsonBlocks(llmRawResponse);
-    if (jsonBlocks.length === 0) {
-      throw new Error('No valid JSON found');
+    if (!user || !user.preference || user.exams.length === 0) {
+      throw new InternalServerErrorException('[❌ 사용자 정보 부족]');
     }
-    parsed = jsonBlocks.flatMap(block => JSON.parse(block));
-  } catch (err) {
-    console.error('[❌ JSON 파싱 실패]', llmRawResponse);
-    throw new InternalServerErrorException('LLM 응답 JSON 파싱 실패');
-  }
 
-  // 📚 Step 1: DB 등록 과목 가져오기
-  const exams = await this.prisma.exam.findMany({
-    where: { userId: user.id },
-    select: { subject: true },
-  });
-  const registeredSubjects = new Set(exams.map((exam) => exam.subject));
+    // ✅ 기존 계획 정리 (외래키 제약 조건 해결)
+    await this.cleanupExistingPlans(user.id);
 
-  // 📚 Step 2: LLM Plan 필터링 (DB 등록 과목만, 중복 제거)
-  const uniquePlans = new Map();
-  for (const plan of parsed) {
-    if (!registeredSubjects.has(plan.subject)) {
-      continue;  // DB에 없는 과목 버림
+    const prompt = this.createPromptFromUserData(user, userId, databaseId);
+    const llmRawResponse = await this.llmClient.generateSummary(prompt);
+
+    interface LlmPlan {
+      subject: string;
+      startDate: string;
+      endDate: string;
+      dailyPlan: string[];
     }
-    if (!uniquePlans.has(plan.subject)) {
-      uniquePlans.set(plan.subject, plan);  // 과목명 중복 제거
-    }
-  }
 
-  // 📚 Step 3: 저장
-  await this.saveStudyPlans(
-    Array.from(uniquePlans.values()).map(plan => ({
-      userId,
+    let parsed: LlmPlan[];
+    try {
+      const jsonBlocks = this.extractAllJsonBlocks(llmRawResponse);
+      if (jsonBlocks.length === 0) {
+        throw new Error('No valid JSON found');
+      }
+      parsed = jsonBlocks.flatMap(block => JSON.parse(block));
+    } catch (err) {
+      console.error('[❌ JSON 파싱 실패]', llmRawResponse);
+      throw new InternalServerErrorException('LLM 응답 JSON 파싱 실패');
+    }
+
+    // 📚 Step 1: DB 등록 과목 가져오기
+    const exams = await this.prisma.exam.findMany({
+      where: { userId: user.id },
+      select: { subject: true },
+    });
+    const registeredSubjects = new Set(exams.map((exam) => exam.subject));
+
+    // 📚 Step 2: LLM Plan 필터링 (DB 등록 과목만, 중복 제거)
+    const uniquePlans = new Map();
+    for (const plan of parsed) {
+      if (!registeredSubjects.has(plan.subject)) {
+        continue;  // DB에 없는 과목 버림
+      }
+      if (!uniquePlans.has(plan.subject)) {
+        uniquePlans.set(plan.subject, plan);  // 과목명 중복 제거
+      }
+    }
+
+    // 📚 Step 3: 저장
+    await this.saveStudyPlans(
+      Array.from(uniquePlans.values()).map(plan => ({
+        userId,
+        subject: plan.subject,
+        startDate: plan.startDate,
+        endDate: plan.endDate,
+        dailyPlan: plan.dailyPlan,
+        databaseId,
+      })),
+    );
+
+    // ✅ 응답에 userId와 databaseId 포함하여 반환
+    const responseData = Array.from(uniquePlans.values()).map(plan => ({
+      userId: userId,  // 요청에서 받은 userId 포함
       subject: plan.subject,
       startDate: plan.startDate,
       endDate: plan.endDate,
       dailyPlan: plan.dailyPlan,
-      databaseId,
-    })),
-  );
+      databaseId: databaseId || 'default'  // 요청에서 받은 databaseId 포함
+    }));
 
-  return Array.from(uniquePlans.values());  // 저장 성공 후 결과 반환
+    return responseData;  // 저장 성공 후 결과 반환
+  }
+
+  // ✅ 기존 계획 정리 함수 (외래키 제약 조건 해결)
+  private async cleanupExistingPlans(userId: number): Promise<void> {
+    try {
+      // 1. 기존 StudyPlan ID들 조회
+      const existingPlans = await this.prisma.studyPlan.findMany({
+        where: { userId },
+        select: { id: true }
+      });
+
+      if (existingPlans.length > 0) {
+        const studyPlanIds = existingPlans.map(plan => plan.id);
+        
+        // 2. DailyPlan 먼저 삭제 (외래키 제약 조건 준수)
+        await this.prisma.dailyPlan.deleteMany({
+          where: {
+            studyPlanId: { in: studyPlanIds }
+          }
+        });
+
+        // 3. 그 다음 StudyPlan 삭제
+        await this.prisma.studyPlan.deleteMany({
+          where: { userId }
+        });
+
+        console.log(`🗑️ 기존 계획 ${existingPlans.length}개 정리 완료`);
+      }
+    } catch (error) {
+      console.error('기존 계획 정리 중 오류:', error);
+      throw new InternalServerErrorException('기존 계획 정리 실패');
+    }
+  }
+  async getStudyPlansByUserId(userId: string) {
+  // 1. 사용자 존재 확인
+  const user = await this.prisma.user.findUnique({
+    where: { userId },
+    select: { id: true },
+  });
+
+  if (!user) {
+    throw new Error(`User with userId ${userId} not found`);
+  }
+
+  // 2. 해당 사용자의 모든 학습 계획 조회
+  const studyPlans = await this.prisma.studyPlan.findMany({
+    where: {
+      userId: user.id,  // 내부 DB ID 사용
+    },
+    include: {
+      dailyPlans: {     // 일일 계획도 함께 조회
+        orderBy: {
+          date: 'asc',  // 날짜 순 정렬
+        },
+      },
+    },
+    orderBy: {
+      startDate: 'asc', // 학습 계획도 시작일 순 정렬
+    },
+  });
+
+  return studyPlans;
 }
-
-
   // ✅ StudyPlan + DailyPlan nested create
   private async saveStudyPlans(parsedPlans: any[]) {
     const createPlans: Prisma.PrismaPromise<any>[] = [];  // ✅ 여기!
@@ -140,39 +214,8 @@ async generateStudyPlanAndSave(userId: string, databaseId?: string): Promise<any
     console.log('✅ 모든 StudyPlan과 DailyPlan 저장 완료');
   }
 
-
-  // ✅ 3. 조회 함수
-  async getStudyPlansByUserId(userId: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { userId },
-      select: { id: true },
-    });
-
-    if (!user) {
-      throw new Error(`User with userId ${userId} not found`);
-    }
-
-    const studyPlans = await this.prisma.studyPlan.findMany({
-      where: {
-        userId: user.id,
-      },
-      include: {
-        dailyPlans: {
-          orderBy: {
-            date: 'asc', // dailyPlans 날짜 순 정렬
-          },
-        },
-      },
-      orderBy: {
-        startDate: 'asc', // studyPlan 시작 날짜 순 정렬
-      },
-    });
-
-    return studyPlans;
-  }
-
-  // ✅ 4. LLM 프롬프트 생성
-  private createPromptFromUserData(user: any): string {
+  // ✅ LLM 프롬프트 생성 (userId, databaseId 동적 전달)
+  private createPromptFromUserData(user: any, userId: string, databaseId?: string): string {
     const { preference, exams } = user;
     const studyDays = preference.studyDays;
     const style = preference.style;
@@ -218,7 +261,7 @@ async generateStudyPlanAndSave(userId: string, databaseId?: string): Promise<any
     📌 출력 형식:
     [
       {
-        "userId": "a",
+        "userId": "${userId}",
         "subject": "과목명",
         "startDate": "YYYY-MM-DD",
         "endDate": "YYYY-MM-DD",
@@ -227,31 +270,50 @@ async generateStudyPlanAndSave(userId: string, databaseId?: string): Promise<any
           "6/3: Chapter 2 (p.1-30)",
           "6/5: Review"
         ],
-        "databaseId": "abc123"
+        "databaseId": "${databaseId || 'default'}"
       }
     ]
 
-    📌 반드시 지켜야 할 조건:
+    반드시 지켜야 할 조건:
 
-    1. 모든 과목의 **모든 챕터는 contentVolume 전체 분량을 빠짐없이 학습**해야 한다.)
-      - 일부만 학습하고 넘어가는 경우는 절대 허용되지 않는다.
-      - 마지막 챕터의 마지막 페이지까지 반드시 포함되어야 한다.
-    2. 하나의 과목 내에서는 챕터 순서를 반드시 지켜야 하며, 이전 챕터를 완전히 학습한 후에만 다음 챕터로 넘어갈 수 있다.
-    3. 하루에 같은 챕터를 나눠 학습하는 건 가능하지만, 하나의 줄로 병합해 출력한다.
-      - 예: "6/3: Chapter 2 (p.1-30)" ← O
-      - 예: "6/3: Chapter 2 (p.1-10)", "6/3: Chapter 2 (p.11-20)" ← X
-    4. 하루에 배정되는 챕터 수는 ${sessions}개 이하여야 한다.
-    5. 각 챕터는 difficulty에 따라 다음을 고려하여 분할하되, 전체 페이지 수와 학습 가능한 날짜 수를 고려해 아래 값을 유연하게 조정할 수 있다:
-      - 쉬움: 평균 하루 25p
-      - 보통: 평균 하루 17p
-      - 어려움: 평균 하루 12p
-    6. 일정은 날짜 순으로 정렬되어야야하고, 절대로 누락된 챕터가 있으면 안된다.
-    7. 학습 스타일에 따라 다음을 따른다:
-      - focus: 하루에 무조건 한 과목만을 학습한다.(하루에 한 과목의 여러챕터를 학습하는것은 가능)
-      - multi: 하루에 여러 과목을 병행(가능한 contentVolme을 최소화하는 방향으로 실시한다.)
-    8. dailyPlan은 studyDays에 해당하는 요일만 포함해야 한다. 예: ["월", "화", "수"]면 금/토/일은 제외한다.
-    9. Review는 **모든 챕터가 완전히 끝난 이후**에만 배정한다. 하나라도 챕터가 누락되었으면 Review는 배정하지 않는다.
-    10. 무조건 하루에 한 챕터를 끝낼 필요는 없고, 최대한 학습가능날짜에 학습계획을 수행하도록 한다.
+    **챕터 순서 엄수 (최우선)**:
+    1. **한 과목 내에서 챕터는 반드시 순서대로 진행**되어야 한다.
+       - Chapter 1이 완전히 끝나지 않으면 Chapter 2는 절대 시작할 수 없다.
+       - Chapter 2가 완전히 끝나지 않으면 Chapter 3는 절대 시작할 수 없다.
+    
+    2. **하루에 여러 챕터 동시 진행 금지**:
+       - 잘못된 예: "6/6: Chapter 2 (p.1-15), Chapter 3 (p.1-12)"
+       - 올바른 예: "6/6: Chapter 2 (p.1-30)" (Chapter 2 완료 후)
+       - 올바른 예: "6/9: Chapter 3 (p.1-25)" (다음 날 Chapter 3 시작)
+
+    3. **모든 챕터의 전체 페이지 완주**:
+       - 각 챕터의 contentVolume 전체를 빠짐없이 학습해야 한다.
+       - 일부 페이지만 학습하고 다음 챕터로 넘어가는 것은 절대 금지.
+
+    **학습 계획 규칙**:
+    4. **하루 학습량 제한**: 하루에 배정되는 챕터 수는 ${sessions}개 이하
+    
+    5. **페이지 분할 기준** (difficulty 고려, 유연하게 조정 가능):
+       - 쉬움: 평균 하루 25p
+       - 보통: 평균 하루 17p  
+       - 어려움: 평균 하루 12p
+    
+    6. **하루 내 같은 챕터 분할 허용**:
+       - "6/3: Chapter 2 (p.1-30)" (하루에 한 챕터 전체)
+       - "6/3: Chapter 2 (p.1-15)" + "6/4: Chapter 2 (p.16-30)" (여러 날에 걸쳐 분할)
+       - "6/3: Chapter 2 (p.1-10), Chapter 2 (p.11-20)" (같은 날 여러 줄 금지)
+
+    **일정 관리**:
+    7. **학습 스타일별 과목 배치**:
+       - focus: 하루에 한 과목만 학습 (여러 챕터 가능하지만 같은 과목만)
+       - multi: 하루에 여러 과목 병행 가능 (각 과목별로 챕터 순서는 엄수)
+    
+    8. **학습 요일 준수**: studyDays에 해당하는 요일만 사용
+    
+    9. **날짜 순 정렬**: dailyPlan은 시간 순서대로 정렬
+    
+    10. **Review 배치**: 모든 챕터가 완전히 끝난 후에만 Review 추가
+
 
     📌 출력은 반드시 JSON 배열만 포함해야 하며, 설명 문장이나 코드 블록은 절대 포함하지 않는다.
   `.trim();
