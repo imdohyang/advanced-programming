@@ -10,7 +10,7 @@ import { UserPreferenceModule } from './user-preference/user-preference.module';
 import { AuthModule } from './auth/auth.module';
 import { ExamModule } from './exam/exam.module';
 import { AiModule } from './planner/ai/ai.module';
-import { PlannerModule } from './planner/planner.module';
+// import { PlannerModule } from './planner/planner.module';
 import { NotionModule } from './notion/notion.module'; // ✅ 다시 주석 해제하여 활성화
 
 @Module({
