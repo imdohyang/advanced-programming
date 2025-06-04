@@ -1,22 +1,22 @@
-export async function getStudyPlans(userId: string): Promise<any[]> {
-  try {
-    const res = await fetch(
-      `https://advanced-programming.onrender.com/ai-plan/list?userId=${encodeURIComponent(userId)}`,
-      {
-        method: 'GET',
-        credentials: 'include', // ✅ HttpOnly 쿠키 기반 인증
-      }
-    );
+export interface GeneratePlanRequest {
+  userId: string;
+  databaseId: string;
+}
 
-    if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(`❌ 학습 계획 조회 실패: ${errorText}`);
-    }
+export async function generateStudyPlan(data: GeneratePlanRequest): Promise<Response> {
+  const response = await fetch('http://localhost:4523/api#//ai-plan', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(data),
+    credentials: 'include' // 필요 시 쿠키 인증을 위해 포함
+  });
 
-    const data = await res.json();
-    return data;
-  } catch (err) {
-    console.error(err);
-    throw new Error('❌ 학습 계획 가져오기 중 오류 발생');
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`학습 계획 생성 실패: ${response.status} ${errorText}`);
   }
+
+  return response;
 }
