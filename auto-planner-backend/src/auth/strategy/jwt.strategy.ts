@@ -42,12 +42,21 @@ import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
+import { Request } from 'express'; // 테스트로 추가
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor(private configService: ConfigService) {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      // jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+
+      // 쿠키에서 JWT를 추출하기 위해 ExtractJwt.fromExtractors 사용
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        (req: Request) => {
+          console.log('🔥 쿠키:', req.cookies);
+          return req?.cookies?.access_token || null;
+        }
+      ]), // 쿠키에서 access_token 추출
       secretOrKey: configService.get<string>('JWT_SECRET'),
       ignoreExpiration: false,
     });
