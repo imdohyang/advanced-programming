@@ -250,6 +250,7 @@ npm run dev
 ```
 
 ## 📁 프로젝트 구조
+```
 advanced-programming
 ├── auto-planner-backend/         # 백엔드 서버 코드
 │   ├── prisma/                   # Prisma 설정 및 DB 스키마 정의
@@ -264,9 +265,10 @@ advanced-programming
 │   │   ├── user-preference/      # 사용자의 학습 스타일, 학습 요일 등 성향 정보 API
 ├── frontend/                     # 프론트엔드 Svelte 프로젝트
 │   ├── /                         # 메인 화면, 로그인/계정 생성 화면, 학습 계획 페이지 등
-
+```
 
 ## 📁 프로젝트 구조 및 주요 파일 설명
+```
 advanced-programming
 ├── auto-planner-backend/
 │   ├── prisma/
@@ -294,7 +296,7 @@ advanced-programming
 │   │   │   └── user.controller.ts        # 사용자 등록 및 조회
 │   │   ├── user-preference/
 │   │   │   └── user-preference.controller.ts   # 학습 성향 등록 및 조회
-
+```
 
 ## 📖 API 문서
 
