@@ -34,7 +34,7 @@ let AuthService = class AuthService {
             userId: user.userId,
         };
         return {
-            access_token: this.jwtService.sign(payload),
+            access_token: this.jwtService.sign(payload), user
         };
     }
     async signup(dto) {

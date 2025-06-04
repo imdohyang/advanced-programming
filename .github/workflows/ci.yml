@@ -1,0 +1,62 @@
+name: Full CI – Backend & Frontend (No Lint)
+
+on:
+  push:
+    paths:
+      - 'auto-planner-backend/**'
+      - 'frontend/idh/**'
+  pull_request:
+    paths:
+      - 'auto-planner-backend/**'
+      - 'frontend/idh/**'
+
+jobs:
+  backend:
+    name: Backend CI (NestJS)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: auto-planner-backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Type check (tsc)
+        run: npm run typecheck
+
+      - name: Unit tests (Jest)
+        run: npm test
+
+  frontend:
+    name: Frontend CI (Svelte - idh)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend/idh
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Type check (svelte-check)
+        run: npm run check
+
+      - name: Build Svelte App
+        run: npm run build

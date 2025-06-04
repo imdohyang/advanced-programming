@@ -76,17 +76,27 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { saveToken } from './auth/notion-token.store';
-import * as cookieParser from 'cookie-parser'; // ✅ 추가
+import * as cookieParser from 'cookie-parser'; // ✅ 추가 -> 다시 주석처리(테스트)
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  // Optional: process.exit(1);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception thrown:', err);
+  // Optional: process.exit(1);
+});
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // ✅ 쿠키 파서 등록
-  app.use(cookieParser());
+  app.use(cookieParser()); // -> 다시 주석처리(테스트)
 
   // ✅ CORS 설정 (프론트 도메인 + credentials 허용)
   app.enableCors({
-    origin: ['http://localhost:5173', 'https://advanced-programming.onrender.com', 'http://localhost:5174', 'https://soft-pie-51c3bf.netlify.app/', 'https://auto-planner.netlify.app/'],
+    origin: ['http://localhost:5173', 'https://advanced-programming.onrender.com', 'http://localhost:5174', 'https://soft-pie-51c3bf.netlify.app/', 'https://auto-planner.netlify.app'],
     credentials: true,
   });
 

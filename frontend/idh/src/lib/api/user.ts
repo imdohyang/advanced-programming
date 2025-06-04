@@ -1,9 +1,13 @@
-// src/lib/api/user.ts
+import { user } from '$lib/stores/user';
+import { get } from 'svelte/store';
+
 const BASE_URL = 'https://advanced-programming.onrender.com';
 
 export async function checkUserExists(userId: string): Promise<boolean> {
   try {
-    const res = await fetch(`${BASE_URL}/user/${userId}`);
+    const res = await fetch(`${BASE_URL}/user/${userId}`, {
+      credentials: 'include'
+    });
     if (res.ok) return true; // 이미 존재
     if (res.status === 404) return false; // 존재하지 않음
     throw new Error('사용자 조회 실패');
@@ -13,13 +17,13 @@ export async function checkUserExists(userId: string): Promise<boolean> {
   }
 }
 
-
 export async function signupUser({ userId, password }) {
-  const res = await fetch('https://advanced-programming.onrender.com/user', {
+  const res = await fetch(`${BASE_URL}/user`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
+    credentials: 'include',
     body: JSON.stringify({
       userId,
       password,

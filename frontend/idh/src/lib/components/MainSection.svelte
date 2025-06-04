@@ -1,6 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { saveUserPreference, getUserPreference } from '$lib/api/userPreference';
+  import { user } from '$lib/stores/user';
+  import { get } from 'svelte/store';
+  import { goto } from '$app/navigation';
 
   let userId = '';
   let learningStyle: 'focus' | 'parallel' = 'focus';
@@ -12,13 +15,13 @@
 
   // ✅ 초기화 시, 로그인 정보 확인 + 기존 설정 로딩
   onMount(async () => {
-    const storedId = localStorage.getItem('userId');
-    if (!storedId) {
+    const currentUser = get(user);
+    if (!currentUser?.userId) {
       alert('로그인이 필요합니다.');
       window.location.href = '/';
       return;
     }
-    userId = storedId;
+    userId = currentUser.userId;
 
     try {
       const res = await getUserPreference(userId);
@@ -67,9 +70,9 @@
     };
 
     try {
-      await saveUserPreference(userId, body);
+      await saveUserPreference(body);
       alert('✅ 설정이 저장되었습니다!');
-      window.location.href = '/userinfo';
+      await goto('/userinfo');
     } catch (err) {
       console.error(err);
       alert('⚠️ 설정 저장 실패!');
@@ -83,7 +86,7 @@
     <div class="profile-header">
       <div class="avatar-placeholder"></div>
       <div class="user-info">
-        <p class="user-email">{userId}@email.com</p>
+        <p class="user-email">{userId}</p>
         <p class="manage-settings-text">학습 설정 관리</p>
       </div>
     </div>
@@ -126,7 +129,7 @@
         </div>
       </div>
 
-      <button type="submit" class="save-button" on:click={handleSubmit}>설정 저장</button>
+      <button type="submit" class="save-button">설정 저장</button>
     </form>
   </div>
 </section>

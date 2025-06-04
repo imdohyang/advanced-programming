@@ -15,13 +15,14 @@ export class AuthController {
   @Post('login')
   @ApiOperation({ summary: '로그인 및 JWT 쿠키 발급' })
   async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
-    const { access_token } = await this.authService.login(dto);
+    const { access_token} = await this.authService.login(dto);
 
     res.cookie('access_token', access_token, {
       httpOnly: true,
       // secure: false, // 로컬에서는 false
       secure: true, // HTTPS 배포 시
-      sameSite: 'lax',
+      // sameSite: 'lax',
+      sameSite: 'none', // CORS 요청 허용
     });
 
     return access_token;

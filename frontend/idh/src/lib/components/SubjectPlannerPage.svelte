@@ -3,15 +3,15 @@
   import Header from '$lib/components/Header.svelte';
   import SubjectForm from '$lib/components/SubjectForm.svelte';
   import { deleteAllExams } from '$lib/api/exam';
-  import { checkNotionConnected } from '$lib/api/notion';
-  import { confirmPlan } from '$lib/api/confirm';
   import { goto } from '$app/navigation';
-
-  const token = sessionStorage.getItem('token');
-  const userId = sessionStorage.getItem('userId');
+  import { user } from '$lib/stores/user';
+  import { get } from 'svelte/store';
+  import { confirmAllPlansFromList } from '$lib/api/confirm';
 
   let subjects = [];
-  
+  let userId = '';
+  let token = '';
+
 
   function extractDatabaseId(input: string): string | null {
     try {
@@ -24,6 +24,16 @@
   }
 
   onMount(async () => {
+    const u = get(user);
+    console.log('[DEBUG] userId:', userId);
+    if (!u?.userId) {
+      alert('로그인이 필요합니다.');
+      goto('/');
+      return;
+    }
+
+    userId = u.userId;
+    token = u.token;
     try {
       const res = await fetch(`https://advanced-programming.onrender.com/exam/${userId}`);
       if (!res.ok) throw new Error('과목 정보 불러오기 실패');
@@ -90,42 +100,24 @@
 
   async function handleCreatePlan() {
     try {
-      const input = prompt('📌 노션 데이터베이스 **주소나 ID**를 입력하세요:');
-      if (!input) {
-        alert('❗ 입력이 취소되었습니다.');
+      const u = get(user);
+      if (!u?.userId) {
+        alert('로그인이 필요합니다.');
+        goto('/');
         return;
       }
 
-      const databaseId = extractDatabaseId(input);
-      if (!databaseId) {
-        alert('❗ 유효한 노션 주소 또는 ID가 아닙니다.');
-        return;
-      }
+      await confirmAllPlansFromList(u.userId);
 
-      for (const subject of subjects) {
-        const payload = {
-          userId,
-          subject: '고급 프로그래밍',
-          startDate: '2025-06-01',
-          endDate:'2025-06-15',
-          dailyPlan: [
-            "6/1: Chapter 1",
-            "6/2: Chapter 2"
-          ],
-          databaseId
-        };
-
-        await confirmPlan(userId, payload);
-      }
-
-      alert('✅ 노션에 학습 계획이 성공적으로 전송되었습니다.');
+      alert('✅ Prisma → Notion 연동이 완료되었습니다!');
       goto('/main');
-
     } catch (err) {
-      alert('❗ 노션 연동이 필요합니다. 메인 화면에서 연동을 먼저 진행해주세요.');
+      console.error('[❌ 연동 실패]', err);
+      alert('❗ 노션 연동에 실패했습니다. 다시 시도해주세요.'); 
       goto('/main');
     }
   }
+
 
 </script>
 

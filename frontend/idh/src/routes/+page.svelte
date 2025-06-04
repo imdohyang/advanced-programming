@@ -12,14 +12,12 @@
 
   async function handleLogin() {
     try {
-      const result = await login({ userId, password });
-      sessionStorage.setItem('token', result.token);     
-      sessionStorage.setItem('userId', result.userId);
+      await login({ userId, password }); // Svelte store에만 저장됨
       loginError = false;
       goto('/main');
     } catch (e) {
       loginError = true;
-      errorMessage = e.message || '로그인에 실패했습니다.';
+      errorMessage = e.message || '로그인에 실패했습니다.'; 
       userId = '';
       password = '';
       userIdInput?.focus();

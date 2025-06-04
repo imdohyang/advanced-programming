@@ -3,6 +3,8 @@
   import SettingsSummary from '$lib/components/SettingsSummary.svelte';
   import { onMount } from 'svelte';
   import { getUserPreference } from '$lib/api/userPreference';
+  import { user } from '$lib/stores/user';
+  import { get } from 'svelte/store';
 
   let userEmail = '';
   let learningStyle = '';
@@ -10,17 +12,19 @@
   let studySessions = 0;
 
   onMount(async () => {
-    const userId = localStorage.getItem('userId');
-    if (!userId) {
+    const currentUser = get(user);
+    if (!currentUser?.userId) {
       alert('로그인이 필요합니다.');
       window.location.href = '/';
       return;
     }
 
-    userEmail = `${userId}@email.com`;
+    userEmail = currentUser.name
+      ? `${currentUser.name} (${currentUser.userId})`
+      : `${currentUser.userId}`;
 
     try {
-      const res = await getUserPreference(userId);
+      const res = await getUserPreference(currentUser.userId);
       learningStyle = res.style === 'focus' ? '하루 한 과목 집중' : '여러 과목 병행';
       studyDays = res.studyDays;
       studySessions = res.sessionsPerDay;
@@ -29,7 +33,6 @@
     }
   });
 </script>
-
 
 <div class="page-wrapper">
   <Header />
