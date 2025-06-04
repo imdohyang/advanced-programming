@@ -11,7 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CreateExamDto = void 0;
 const swagger_1 = require("@nestjs/swagger");
-const chapter_info_dto_1 = require("./chapter-info.dto");
+const chapter_info_dto_1 = require("../../exam/dto/chapter-info.dto");
 class CreateExamDto {
     subject;
     startDate;

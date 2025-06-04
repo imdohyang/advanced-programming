@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { ChapterInfoDto } from './chapter-info.dto';
+import { ChapterInfoDto } from '../../exam/dto/chapter-info.dto';
 
 export class CreateExamDto {
   @ApiProperty({ example: '수학', description: '시험 과목' })

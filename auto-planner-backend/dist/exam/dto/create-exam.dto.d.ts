@@ -1,4 +1,4 @@
-import { ChapterInfoDto } from './chapter-info.dto';
+import { ChapterInfoDto } from '../../exam/dto/chapter-info.dto';
 export declare class CreateExamDto {
     subject: string;
     startDate: string;

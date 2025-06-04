@@ -79,7 +79,7 @@
 // }
 
 import { Injectable } from '@nestjs/common';
-import { AiGeneratePlanDto } from './ai/generate-plan.dto';
+//import { GeneratePlanDto } from './ai/generate-plan.dto';
 import { ConfirmPlanDto } from './dto/confirm-plan.dto';
 import { NotionService } from 'src/notion/notion.service';
 import { parse, format } from 'date-fns';
@@ -90,7 +90,7 @@ export class PlannerService {
     private readonly notionService: NotionService,
   ) {}
 
-  // generatePlan(dto: AiGeneratePlanDto) {
+  // generatePlan(dto: GeneratePlanDto) {
   //   const prompt = this._generatePrompt(dto);
 
   //   return {
