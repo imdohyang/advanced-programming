@@ -11,6 +11,7 @@
 - [📆 프로젝트 일정](#-프로젝트-일정)
 - [🔧 설치 및 실행](#-설치-및-실행)
 - [📁 프로젝트 구조](#-프로젝트-구조)
+- [📁 프로젝트 구조 및 주요 파일 설명](#-프로젝트-구조)
 - [📖 API 문서](#-api-문서)
 - [🗂 폴더별 담당자 및 역할](#-폴더별-담당자-및-역할)
 - [🤝 기여하기](#-기여하기)
@@ -21,7 +22,8 @@
 
 AI 기반 개인 맞춤형 학습 계획표 생성 서비스
 
-## 📖사용자 가이드라인
+## 📖 사용자 가이드라인
+이 가이드는 **시험이 얼마남지않은 학생들**이 서비스를 처음 실행하여 학습 계획을 확인하고 Notion과 연동하는 과정을 설명합니다.
 ### 1. 서비스 소개
 **AI Study Planner**는 사용자의 공부 성향과 과목 정보를 바탕으로 자동으로 학습 계획표를 생성해주는 서비스입니다.  
 사용자는 추천된 계획을 확인하고, Notion에 연동하여 일정처럼 관리할 수 있습니다.
@@ -72,7 +74,7 @@ AI 기반 개인 맞춤형 학습 계획표 생성 서비스
 - 생성된 학습 계획은 날짜별로 챕터가 정리되어 보여짐
 - 버튼 클릭으로 Notion Calendar에 동기화 가능  
   → 해당 날짜에 학습 내용이 자동 등록됨
-
+- 예: `6/5: Chapter 1 (p.1-20), Chapter 2 (p.21-40)`
 ---
 
 ### 7. 학습 계획 관리
@@ -249,26 +251,54 @@ npm run dev
 
 ## 📁 프로젝트 구조
 advanced-programming
-├── auto-planner-backend/
-│   ├── prisma/ # Prisma 설정 및 DB 스키마 정의
-│   ├── src/
-│   │   ├── auth/ # 사용자 로그인, Notion OAuth 인증 등 인증 관련 기능
-│   │   ├── exam/ # 시험 정보 및 챕터
-│   │   ├── notion/ # LLM 생성 계획을 Notion에 자동 동기화하는 기능
-│   │   ├── planner/ 
-│   │   │   ├── ai/ #  AI 학습 계획 생성 핵심 로직 포함
-│   │   ├── prisma/ # NestJS 내 Prsima 서비스 제공
-│   │   ├── user/ # 사용자 정보 
-│   │   ├── user-preference/ # 사용자의 학습스타일, 학습 요일
+├── auto-planner-backend/ # 백엔드 서버 코드
+│ ├── prisma/ # Prisma 설정 및 DB 스키마 정의
+│ ├── src/
+│ │ ├── auth/ # 사용자 로그인, Notion OAuth 인증 등 인증 관련 기능
+│ │ ├── exam/ # 시험 정보 및 챕터 관련 CRUD API
+│ │ ├── notion/ # LLM 생성 계획을 Notion에 자동 동기화하는 기능
+│ │ ├── planner/
+│ │ │ ├── ai/ # AI 학습 계획 생성 핵심 로직 포함 (LLM 호출, Rule engine 등)
+│ │ ├── prisma/ # NestJS에서 Prisma 서비스 제공
+│ │ ├── user/ # 사용자 정보 관련 API
+│ │ ├── user-preference/ # 사용자의 학습 스타일, 학습 요일 등 성향 정보 API
+├── frontend/ # 프론트엔드 Svelte 프로젝트
+│ ├── / # 메인 화면, 로그인/계정 생성 화면, 학습 계획 페이지 등
 
-├── frontend/
-│   ├── /
-│   ├── /
+## 📁 프로젝트 구조 및 주요 파일 설명
+advanced-programming
+├── auto-planner-backend/
+│ ├── prisma/
+│ │ └── schema.prisma # Prisma ORM 스키마 정의
+│ ├── src/
+│ │ ├── auth/ # 로그인, Notion OAuth 인증
+│ │ │ └── auth.controller.ts # 인증 관련 라우팅
+│ │ ├── exam/ # 시험 및 챕터 관리
+│ │ │ └── exam.controller.ts # 시험/챕터 CRUD API
+│ │ ├── notion/ # Notion 연동
+│ │ │ └── notion.service.ts # 계획 → Notion 캘린더 전송
+│ │ ├── planner/
+│ │ │ └── ai/ # AI 학습 계획 생성 기능
+│ │ │ ├── server/
+│ │ │ │ └── llm-client.service.ts # LLM 서버 API 호출 클라이언트
+│ │ │ ├── utils/
+│ │ │ │ ├── date-utils.ts # 날짜 슬라이싱, valid 날짜 계산 등
+│ │ │ │ └── json-utils.ts # LLM 응답에서 JSON 추출
+│ │ │ ├── ai-planner.controller.ts # /ai-plan/generate API 처리
+│ │ │ ├── ai-planner.service.ts # 학습 계획 생성 비즈니스 로직
+│ │ │ ├── generate-plan.dto.ts # 학습 계획 생성 DTO (입력 형식)
+│ │ ├── prisma/
+│ │ │ └── prisma.service.ts # NestJS 기반 Prisma 클라이언트 등록
+│ │ ├── user/
+│ │ │ └── user.controller.ts # 사용자 등록 및 조회
+│ │ ├── user-preference/
+│ │ │ └── user-preference.controller.ts # 학습 성향 등록 및 조회
+
 
 ## 📖 API 문서
 
 API 문서는 Swagger UI를 통해 확인할 수 있습니다.
-- 개발 환경: `http://localhost:4523/api/docs`
+- 개발 환경: `http://localhost:4523/api/docs` ← Swagger UI를 통해 인터랙티브하게 테스트 가능
 - 추가해야함
 
 
