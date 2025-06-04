@@ -4,8 +4,9 @@ export declare class AiPlannerService {
     private readonly prisma;
     private readonly llmClient;
     constructor(prisma: PrismaService, llmClient: LlmClientService);
+    private extractAllJsonBlocks;
     generateStudyPlanAndSave(userId: string, databaseId?: string): Promise<any[]>;
-    private saveStudyPlans;
+    private cleanupExistingPlans;
     getStudyPlansByUserId(userId: string): Promise<({
         dailyPlans: {
             id: number;
@@ -21,5 +22,6 @@ export declare class AiPlannerService {
         endDate: Date;
         databaseId: string;
     })[]>;
+    private saveStudyPlans;
     private createPromptFromUserData;
 }

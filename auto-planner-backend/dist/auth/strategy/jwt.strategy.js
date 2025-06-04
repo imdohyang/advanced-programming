@@ -18,7 +18,12 @@ let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(pas
     configService;
     constructor(configService) {
         super({
-            jwtFromRequest: passport_jwt_1.ExtractJwt.fromAuthHeaderAsBearerToken(),
+            jwtFromRequest: passport_jwt_1.ExtractJwt.fromExtractors([
+                (req) => {
+                    console.log('🔥 쿠키:', req.cookies);
+                    return req?.cookies?.access_token || null;
+                }
+            ]),
             secretOrKey: configService.get('JWT_SECRET'),
             ignoreExpiration: false,
         });

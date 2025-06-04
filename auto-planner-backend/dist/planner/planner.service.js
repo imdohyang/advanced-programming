@@ -18,23 +18,6 @@ let PlannerService = class PlannerService {
     constructor(notionService) {
         this.notionService = notionService;
     }
-    generatePlan(dto) {
-        const prompt = this._generatePrompt(dto);
-        return {
-            message: '계획 생성 성공',
-            promptSentToAPI: prompt,
-            generatedPlan: `시험 과목: ${dto.subject}, 기간: ${dto.startDate} ~ ${dto.endDate}, 챕터 수: ${dto.chapters.length}`,
-        };
-    }
-    _generatePrompt(dto) {
-        return `
-      사용자는 ${dto.studyPreference} 성향입니다.
-      과목: ${dto.subject}
-      시험 기간: ${dto.startDate} ~ ${dto.endDate}
-      중요도: ${dto.importance}
-      학습 챕터 수: ${dto.chapters.length}
-    `;
-    }
     async confirmPlan(id, dto) {
         for (const entry of dto.dailyPlan) {
             const [date, content] = entry.split(':').map((v) => v.trim());
