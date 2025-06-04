@@ -25,7 +25,7 @@ import { NotionModule } from './notion/notion.module'; // ✅ 다시 주석 해�
     UserPreferenceModule,
     ExamModule,
     AiModule, // ✅ 반드시 포함되어야 Nest가 인스턴스를 만듦
-    PlannerModule,
+    // PlannerModule,
     NotionModule, // ✅ 반드시 포함되어야 라우터 활성화됨
   ],
   controllers: [AppController],
