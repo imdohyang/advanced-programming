@@ -86,7 +86,7 @@
     <div class="profile-header">
       <div class="avatar-placeholder"></div>
       <div class="user-info">
-        <p class="user-email">{userId}@email.com</p>
+        <p class="user-email">{userId}</p>
         <p class="manage-settings-text">학습 설정 관리</p>
       </div>
     </div>
