@@ -1,28 +1,22 @@
+// src/planner/ai/generate-plan.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
-import { ChapterInfoDto } from '../../exam/dto/chapter-info.dto';
+import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
 
-export class GeneratePlanDto {
-  @ApiProperty({ example: 'user123' })
+export class AiGeneratePlanDto {
+  @ApiProperty({ 
+    example: '202255150',
+    description: '사용자 ID' 
+  })
+  @IsString()
+  @IsNotEmpty()
   userId: string;
 
-  @ApiProperty({ example: '수학' })
-  subject: string;
-
-  @ApiProperty({ example: '2025-06-01' })
-  startDate: string;
-
-  @ApiProperty({ example: '2025-06-15' })
-  endDate: string;
-
-  @ApiProperty({ example: 4 })
-  importance: number;
-
-  @ApiProperty({ type: [ChapterInfoDto] })
-  chapters: ChapterInfoDto[];
-
-  @ApiProperty({ example: '집중 잘 되는 아침형' })
-  studyPreference: string;
-
-  @ApiProperty({ example: '...' })
-  DATABASE_ID: string;
+  @ApiProperty({ 
+    example: 'notion-db-id',
+    description: 'Notion 데이터베이스 ID (선택사항)',
+    required: false 
+  })
+  @IsString()
+  @IsOptional()
+  databaseId?: string;
 }

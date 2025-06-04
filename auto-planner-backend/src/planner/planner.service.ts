@@ -79,7 +79,7 @@
 // }
 
 import { Injectable } from '@nestjs/common';
-import { GeneratePlanDto } from './ai/generate-plan.dto';
+//import { GeneratePlanDto } from './ai/generate-plan.dto';
 import { ConfirmPlanDto } from './dto/confirm-plan.dto';
 import { NotionService } from 'src/notion/notion.service';
 import { parse, format } from 'date-fns';
@@ -90,25 +90,25 @@ export class PlannerService {
     private readonly notionService: NotionService,
   ) {}
 
-  generatePlan(dto: GeneratePlanDto) {
-    const prompt = this._generatePrompt(dto);
+  // generatePlan(dto: GeneratePlanDto) {
+  //   const prompt = this._generatePrompt(dto);
 
-    return {
-      message: '계획 생성 성공',
-      promptSentToAPI: prompt,
-      generatedPlan: `시험 과목: ${dto.subject}, 기간: ${dto.startDate} ~ ${dto.endDate}, 챕터 수: ${dto.chapters.length}`,
-    };
-  }
+  //   return {
+  //     message: '계획 생성 성공',
+  //     promptSentToAPI: prompt,
+  //     generatedPlan: `시험 과목: ${dto.subject}, 기간: ${dto.startDate} ~ ${dto.endDate}, 챕터 수: ${dto.chapters.length}`,
+  //   };
+  // }
 
-  private _generatePrompt(dto: GeneratePlanDto): string {
-    return `
-      사용자는 ${dto.studyPreference} 성향입니다.
-      과목: ${dto.subject}
-      시험 기간: ${dto.startDate} ~ ${dto.endDate}
-      중요도: ${dto.importance}
-      학습 챕터 수: ${dto.chapters.length}
-    `;
-  }
+  // private _generatePrompt(dto: GeneratePlanDto): string {
+  //   return `
+  //     사용자는 ${dto.studyPreference} 성향입니다.
+  //     과목: ${dto.subject}
+  //     시험 기간: ${dto.startDate} ~ ${dto.endDate}
+  //     중요도: ${dto.importance}
+  //     학습 챕터 수: ${dto.chapters.length}
+  //   `;
+  // }
 
   async confirmPlan(id: string, dto: ConfirmPlanDto) {
     for (const entry of dto.dailyPlan) {
@@ -133,5 +133,6 @@ export class PlannerService {
     };
   }
 }
+
 
 

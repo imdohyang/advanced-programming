@@ -21,7 +21,7 @@
 
     userEmail = currentUser.name
       ? `${currentUser.name} (${currentUser.userId})`
-      : `${currentUser.userId}@email.com`;
+      : `${currentUser.userId}`;
 
     try {
       const res = await getUserPreference(currentUser.userId);
