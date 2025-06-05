@@ -5,6 +5,9 @@
   export let onRemove;
   export let userId;
   export let token;
+  // 커스텀 모달 함수 prop으로 받기
+  export let customAlert;   // (message: string) => Promise<void>
+  export let customConfirm; // (message: string) => Promise<boolean>
 
   import { deleteExam, createExam } from '$lib/api/exam';
 
@@ -37,16 +40,20 @@
     onChange(index, newSubject);
   }
 
+  // 삭제 버튼: confirm 모달 → 삭제 → alert 모달
   async function handleDelete() {
+    const ok = await customConfirm('❌ 과목을 삭제할까요?');
+    if (!ok) return;
     try {
       await deleteExam(userId, subjectData.subjectName, token);
       onRemove(index);
+      await customAlert('과목이 삭제되었습니다.');
     } catch (err) {
-      alert(`시험 삭제 실패: ${err.message}`);
+      await customAlert(`시험 삭제 실패: ${err.message}`);
     }
   }
 
-  // ✅ 중복 과목명 체크 함수
+  // 중복 과목명 체크 함수
   async function checkSubjectExists(userId, subjectName) {
     const res = await fetch(`https://advanced-programming.onrender.com/exam/${userId}`);
     if (!res.ok) {
@@ -56,12 +63,12 @@
     return data.exams.some(exam => exam.subject.trim() === subjectName.trim());
   }
 
+  // 확인 버튼: 중복 체크 → alert 모달 → 등록 → alert 모달
   async function handleConfirm() {
     try {
-      // ✅ 과목 중복 체크
       const isDuplicate = await checkSubjectExists(userId, subjectData.subjectName);
       if (isDuplicate) {
-        alert('⚠️ 이미 등록한 과목입니다.');
+        await customAlert('⚠️ 이미 등록한 과목입니다.');
         return;
       }
 
@@ -80,11 +87,10 @@
         chapters,
       };
 
-      console.log('✅ examData to send:', examData);
       await createExam(examData, token);
-      alert('✅ 시험 등록 완료!');
+      await customAlert('✅ 시험 등록 완료!');
     } catch (err) {
-      alert(`시험 등록 실패: ${err.message}`);
+      await customAlert(`시험 등록 실패: ${err.message}`);
     }
   }
 </script>
@@ -138,9 +144,7 @@
     <button type="button" on:click={handleDelete} class="delete-btn">❌ 과목 삭제</button>
     <button type="button" on:click={handleConfirm} class="confirm-btn">✅ 확인</button>
   </div>
-
 </div>
-
 
 <style>
   .form-container {

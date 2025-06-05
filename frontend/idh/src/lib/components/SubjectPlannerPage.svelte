@@ -20,13 +20,18 @@
   let showSuccess = false;    
   let showNotionLoading = false; 
   let showNotionDone = false;       
-  let showErrorModal = false;        // 에러 모달
-  let errorModalMessage = '';        // 에러 메시지
+  let showErrorModal = false;
+  let errorModalMessage = '';
 
   // 커스텀 confirm 모달 상태
   let showConfirmModal = false;
   let confirmModalMessage = '';
   let confirmModalResolve: ((result: boolean) => void) | null = null;
+
+  // 커스텀 alert 모달 상태
+  let showAlertModal = false;
+  let alertModalMessage = '';
+  let alertModalResolve: (() => void) | null = null;
 
   // 커스텀 confirm 함수
   function customConfirm(message: string): Promise<boolean> {
@@ -44,6 +49,22 @@
     }
   }
 
+  // 커스텀 alert 함수
+  function customAlert(message: string): Promise<void> {
+    alertModalMessage = message;
+    showAlertModal = true;
+    return new Promise((resolve) => {
+      alertModalResolve = resolve;
+    });
+  }
+  function handleAlertClose() {
+    showAlertModal = false;
+    if (alertModalResolve) {
+      alertModalResolve();
+      alertModalResolve = null;
+    }
+  }
+
   function extractDatabaseId(input: string): string | null {
     try {
       const url = new URL(input);
@@ -57,9 +78,8 @@
   onMount(async () => {
     const u = get(user);
     if (!u?.userId) {
-      errorModalMessage = '로그인이 필요합니다.';
-      showErrorModal = true;
-      // goto('/')는 모달 닫을 때 처리
+      await customAlert('로그인이 필요합니다.');
+      goto('/');
       return;
     }
 
@@ -89,8 +109,7 @@
     } catch (err) {
       console.error(err);
       subjects = [getEmptySubject()];
-      errorModalMessage = '과목 정보를 불러오지 못했습니다.';
-      showErrorModal = true;
+      await customAlert('과목 정보를 불러오지 못했습니다.');
     }
   });
 
@@ -111,11 +130,9 @@
     try {
       await deleteAllExams(userId, token);
       subjects = [getEmptySubject()];
-      errorModalMessage = '✅ 모든 과목이 초기화되었습니다.';
-      showErrorModal = true;
+      await customAlert('✅ 모든 과목이 초기화되었습니다.');
     } catch (err) {
-      errorModalMessage = `❌ 초기화 실패: ${err.message}`;
-      showErrorModal = true;
+      await customAlert(`❌ 초기화 실패: ${err.message}`);
     }
   }
 
@@ -156,8 +173,7 @@
       showSuccess = true;
     } catch (err) {
       showLoading = false;
-      errorModalMessage = '❗ 계획 생성에 실패했습니다. 다시 시도해주세요.';
-      showErrorModal = true;
+      await customAlert('❗ 계획 생성에 실패했습니다. 다시 시도해주세요.');
       console.error('[❌ 계획 생성 실패]', err);
     }
   }
@@ -174,13 +190,11 @@
       showNotionDone = true;
     } catch (err) {
       showNotionLoading = false;
-      // 인증 관련 에러 메시지 분기
       if (err.message && (err.message.includes('인증') || err.message.includes('401'))) {
-        errorModalMessage = '노션 인증을 먼저 완료해주세요.';
+        await customAlert('노션 인증을 먼저 완료해주세요.');
       } else {
-        errorModalMessage = '❗ 노션 연동에 실패했습니다. 다시 시도해주세요.';
+        await customAlert('❗ 노션 연동에 실패했습니다. 다시 시도해주세요.');
       }
-      showErrorModal = true;
       console.error('[❌ 노션 연동 실패]', err);
     }
   }
@@ -188,14 +202,6 @@
   function gotoMain() {
     showNotionDone = false;
     goto('/main');
-  }
-
-  function closeErrorModal() {
-    showErrorModal = false;
-    // 로그인 필요 에러일 때만 메인으로 이동
-    if (errorModalMessage === '로그인이 필요합니다.') {
-      goto('/');
-    }
   }
 </script>
 
@@ -211,6 +217,8 @@
           onRemove={removeSubject}
           token={token}
           userId={userId}
+          customAlert={customAlert}
+          customConfirm={customConfirm}
         />
       {/each}
 
@@ -278,13 +286,13 @@
     </div>
   {/if}
 
-  {#if showErrorModal}
+  {#if showAlertModal}
     <div class="modal-overlay">
       <div class="modal">
         <h3>알림</h3>
-        <div style="margin: 16px 0;">{errorModalMessage}</div>
+        <div style="margin: 16px 0;">{alertModalMessage}</div>
         <div class="modal-actions">
-          <button on:click={closeErrorModal}>확인</button>
+          <button on:click={handleAlertClose}>확인</button>
         </div>
       </div>
     </div>
@@ -303,6 +311,7 @@
     </div>
   {/if}
 </div>
+
 
 <style>
   .page-wrapper {
