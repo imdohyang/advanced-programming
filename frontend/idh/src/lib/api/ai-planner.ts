@@ -4,7 +4,7 @@ export interface GeneratePlanRequest {
 }
 
 export async function generateStudyPlan(data: GeneratePlanRequest): Promise<Response> {
-  const response = await fetch('http://localhost:4523/ai-plan/generate', {
+  const response = await fetch('http://10.125.208.184:4523/ai-plan/generate', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
