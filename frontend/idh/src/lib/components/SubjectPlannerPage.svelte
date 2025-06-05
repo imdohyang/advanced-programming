@@ -15,6 +15,8 @@
 
   let showModal = false;
   let notionDbInput = '';
+  let showLoading = false;            
+  let showSuccess = false;         
 
   function extractDatabaseId(input: string): string | null {
     try {
@@ -105,8 +107,32 @@
     showModal = true;
   }
 
+  // async function submitGeneration() {
+  //   showModal = false;
+
+  //   try {
+  //     const dbId = extractDatabaseId(notionDbInput.trim());
+  //     if (!dbId) throw new Error('Notion DB ID가 유효하지 않습니다.');
+
+  //     const u = get(user);
+  //     await generateStudyPlan({
+  //       userId: u.userId,
+  //       databaseId: dbId
+  //     });
+
+  //     await confirmAllPlansFromList(u.userId);
+
+  //     alert('✅ 계획 생성 및 Notion 연동이 완료되었습니다!');
+  //     goto('/main');
+  //   } catch (err) {
+  //     console.error('[❌ 계획 생성 실패]', err);
+  //     alert('❗ 계획 생성 또는 연동에 실패했습니다. 다시 시도해주세요.');
+  //   }
+  // }
+
   async function submitGeneration() {
     showModal = false;
+    showLoading = true;
 
     try {
       const dbId = extractDatabaseId(notionDbInput.trim());
@@ -118,15 +144,35 @@
         databaseId: dbId
       });
 
-      await confirmAllPlansFromList(u.userId);
-
-      alert('✅ 계획 생성 및 Notion 연동이 완료되었습니다!');
-      goto('/main');
+      showLoading = false;
+      showSuccess = true;
     } catch (err) {
+      showLoading = false;
+      alert('❗ 계획 생성에 실패했습니다. 다시 시도해주세요.');
       console.error('[❌ 계획 생성 실패]', err);
-      alert('❗ 계획 생성 또는 연동에 실패했습니다. 다시 시도해주세요.');
     }
   }
+
+
+  async function sendToNotion() {
+    showSuccess = false;
+    showLoading = true;
+
+    try {
+      const u = get(user);
+      await confirmAllPlansFromList(u.userId);
+
+      showLoading = false;
+      alert('✅ 계획이 노션에 성공적으로 연동되었습니다!');
+      goto('/main');
+    } catch (err) {
+      showLoading = false;
+      alert('❗ 노션 연동에 실패했습니다. 다시 시도해주세요.');
+      console.error('[❌ 노션 연동 실패]', err);
+    }
+  }
+
+
 </script>
 
 
@@ -155,6 +201,19 @@
     </div>
   </main>
 
+  <!-- {#if showModal}
+    <div class="modal-overlay">
+      <div class="modal">
+        <h3>Notion Database ID 입력</h3>
+        <input bind:value={notionDbInput} placeholder="Database address" />
+        <div class="modal-actions">
+          <button on:click={submitGeneration}>확인</button>
+          <button on:click={() => showModal = false}>취소</button>
+        </div>
+      </div>
+    </div>
+  {/if} -->
+
   {#if showModal}
     <div class="modal-overlay">
       <div class="modal">
@@ -167,6 +226,30 @@
       </div>
     </div>
   {/if}
+
+  {#if showLoading}
+    <div class="modal-overlay">
+      <div class="modal">
+        <div class="spinner"></div>
+        <div style="margin-top: 20px;">계획 생성 중...</div>
+      </div>
+    </div>
+  {/if}
+
+  {#if showSuccess}
+    <div class="modal-overlay">
+      <div class="modal">
+        <h3>계획 생성 완료</h3>
+        <div style="margin: 16px 0;">계획이 성공적으로 생성되었습니다.</div>
+        <div class="modal-actions">
+          <button on:click={sendToNotion}>노션에 보내기</button>
+        </div>
+      </div>
+    </div>
+  {/if}
+
+
+
 
 </div>
 
