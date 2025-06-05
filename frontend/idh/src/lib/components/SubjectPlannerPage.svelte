@@ -1,126 +1,3 @@
-<!-- <script lang="ts">
-  import { onMount } from 'svelte';
-  import Header from '$lib/components/Header.svelte';
-  import SubjectForm from '$lib/components/SubjectForm.svelte';
-  import { deleteAllExams } from '$lib/api/exam';
-  import { goto } from '$app/navigation';
-  import { user } from '$lib/stores/user';
-  import { get } from 'svelte/store';
-  import { confirmAllPlansFromList } from '$lib/api/confirm';
-
-  let subjects = [];
-  let userId = '';
-  let token = '';
-
-
-  function extractDatabaseId(input: string): string | null {
-    try {
-      const url = new URL(input);
-      const path = url.pathname.replace(/\//g, '');
-      return path || null;
-    } catch (e) {
-      return input.includes('?') ? input.split('?')[0] : input;
-    }
-  }
-
-  onMount(async () => {
-    const u = get(user);
-    console.log('[DEBUG] userId:', userId);
-    if (!u?.userId) {
-      alert('로그인이 필요합니다.');
-      goto('/');
-      return;
-    }
-
-    userId = u.userId;
-    token = u.token;
-    try {
-      const res = await fetch(`https://advanced-programming.onrender.com/exam/${userId}`);
-      if (!res.ok) throw new Error('과목 정보 불러오기 실패');
-      const data = await res.json();
-
-      if (data.exams.length === 0) {
-        subjects = [getEmptySubject()];
-      } else {
-        subjects = data.exams.map((exam) => ({
-          subjectName: exam.subject,
-          startDate: exam.startDate.slice(0, 10),
-          endDate: exam.endDate.slice(0, 10),
-          importance: exam.importance,
-          units: exam.chapters.map((ch) => ({
-            unitName: ch.chapterTitle,
-            studyAmount: String(ch.contentVolume),
-            difficulty: ch.difficulty,
-          })),
-        }));
-      }
-    } catch (err) {
-      console.error(err);
-      subjects = [getEmptySubject()];
-    }
-  });
-
-  function getEmptySubject() {
-    return {
-      subjectName: '',
-      startDate: '',
-      endDate: '',
-      importance: 3,
-      units: [{ unitName: '', studyAmount: '', difficulty: '난이도 선택' }],
-    };
-  }
-
-  async function resetSubjects() {
-    const ok = confirm('⚠️ 모든 과목 정보를 삭제하고 초기화할까요?');
-    if (!ok) return;
-
-    try {
-      await deleteAllExams(userId, token);
-      subjects = [getEmptySubject()];
-      alert('✅ 모든 과목이 초기화되었습니다.');
-    } catch (err) {
-      alert(`❌ 초기화 실패: ${err.message}`);
-    }
-  }
-
-  function handleSubjectChange(index, updatedSubject) {
-    subjects[index] = { ...updatedSubject };
-    subjects = [...subjects];
-  }
-
-  function addSubject() {
-    subjects = [...subjects, getEmptySubject()];
-  }
-
-  function removeSubject(index) {
-    if (subjects.length > 1) {
-      subjects = subjects.filter((_, i) => i !== index);
-    }
-  }
-
-  async function handleCreatePlan() {
-    try {
-      const u = get(user);
-      if (!u?.userId) {
-        alert('로그인이 필요합니다.');
-        goto('/');
-        return;
-      }
-
-      await confirmAllPlansFromList(u.userId);
-
-      alert('✅ Prisma → Notion 연동이 완료되었습니다!');
-      goto('/main');
-    } catch (err) {
-      console.error('[❌ 연동 실패]', err);
-      alert('❗ 노션 연동에 실패했습니다. 다시 시도해주세요.'); 
-      goto('/main');
-    }
-  }
-
-</script> -->
-
-
 <script lang="ts">
   import { onMount } from 'svelte';
   import Header from '$lib/components/Header.svelte';
@@ -135,9 +12,58 @@
   let subjects = [];
   let userId = '';
   let token = '';
-
-  let showModal = false;
   let notionDbInput = '';
+
+  // 모달 상태
+  let showModal = false;
+  let showLoading = false;            
+  let showSuccess = false;    
+  let showNotionLoading = false; 
+  let showNotionDone = false;       
+  let showErrorModal = false;
+  let errorModalMessage = '';
+
+  // 커스텀 confirm 모달 상태
+  let showConfirmModal = false;
+  let confirmModalMessage = '';
+  let confirmModalResolve: ((result: boolean) => void) | null = null;
+
+  // 커스텀 alert 모달 상태
+  let showAlertModal = false;
+  let alertModalMessage = '';
+  let alertModalResolve: (() => void) | null = null;
+
+  // 커스텀 confirm 함수
+  function customConfirm(message: string): Promise<boolean> {
+    confirmModalMessage = message;
+    showConfirmModal = true;
+    return new Promise((resolve) => {
+      confirmModalResolve = resolve;
+    });
+  }
+  function handleConfirmResult(result: boolean) {
+    showConfirmModal = false;
+    if (confirmModalResolve) {
+      confirmModalResolve(result);
+      confirmModalResolve = null;
+    }
+  }
+
+  // 커스텀 alert 함수
+  function customAlert(message: string): Promise<void> {
+    alertModalMessage = message;
+    showAlertModal = true;
+    return new Promise((resolve) => {
+      alertModalResolve = resolve;
+    });
+  }
+  function handleAlertClose() {
+    showAlertModal = false;
+    if (alertModalResolve) {
+      alertModalResolve();
+      alertModalResolve = null;
+    }
+  }
 
   function extractDatabaseId(input: string): string | null {
     try {
@@ -152,7 +78,7 @@
   onMount(async () => {
     const u = get(user);
     if (!u?.userId) {
-      alert('로그인이 필요합니다.');
+      await customAlert('로그인이 필요합니다.');
       goto('/');
       return;
     }
@@ -183,6 +109,7 @@
     } catch (err) {
       console.error(err);
       subjects = [getEmptySubject()];
+      await customAlert('과목 정보를 불러오지 못했습니다.');
     }
   });
 
@@ -197,15 +124,15 @@
   }
 
   async function resetSubjects() {
-    const ok = confirm('⚠️ 모든 과목 정보를 삭제하고 초기화할까요?');
+    const ok = await customConfirm('모든 과목 정보를 삭제하고 초기화할까요?');
     if (!ok) return;
 
     try {
       await deleteAllExams(userId, token);
       subjects = [getEmptySubject()];
-      alert('✅ 모든 과목이 초기화되었습니다.');
+      await customAlert('✅ 모든 과목이 초기화되었습니다.');
     } catch (err) {
-      alert(`❌ 초기화 실패: ${err.message}`);
+      await customAlert(`❌ 초기화 실패: ${err.message}`);
     }
   }
 
@@ -230,6 +157,7 @@
 
   async function submitGeneration() {
     showModal = false;
+    showLoading = true;
 
     try {
       const dbId = extractDatabaseId(notionDbInput.trim());
@@ -241,18 +169,41 @@
         databaseId: dbId
       });
 
-      await confirmAllPlansFromList(u.userId);
-
-      alert('✅ 계획 생성 및 Notion 연동이 완료되었습니다!');
-      goto('/main');
+      showLoading = false;
+      showSuccess = true;
     } catch (err) {
+      showLoading = false;
+      await customAlert('❗ 계획 생성에 실패했습니다. 다시 시도해주세요.');
       console.error('[❌ 계획 생성 실패]', err);
-      alert('❗ 계획 생성 또는 연동에 실패했습니다. 다시 시도해주세요.');
     }
   }
+
+  async function sendToNotion() {
+    showSuccess = false;
+    showNotionLoading = true;
+
+    try {
+      const u = get(user);
+      await confirmAllPlansFromList(u.userId);
+
+      showNotionLoading = false;
+      showNotionDone = true;
+    } catch (err) {
+      showNotionLoading = false;
+      if (err.message && (err.message.includes('인증') || err.message.includes('401'))) {
+        await customAlert('노션 인증을 먼저 완료해주세요.');
+      } else {
+        await customAlert('❗ 노션 연동에 실패했습니다. 다시 시도해주세요.');
+      }
+      console.error('[❌ 노션 연동 실패]', err);
+    }
+  }
+
+  function gotoMain() {
+    showNotionDone = false;
+    goto('/main');
+  }
 </script>
-
-
 
 <div class="page-wrapper">
   <Header />
@@ -266,6 +217,8 @@
           onRemove={removeSubject}
           token={token}
           userId={userId}
+          customAlert={customAlert}
+          customConfirm={customConfirm}
         />
       {/each}
 
@@ -282,16 +235,83 @@
     <div class="modal-overlay">
       <div class="modal">
         <h3>Notion Database ID 입력</h3>
-        <input bind:value={notionDbInput} placeholder="예: notion-db-id" />
+        <input bind:value={notionDbInput} placeholder="Database address" />
         <div class="modal-actions">
-          <button on:click={submitGeneration}>확인</button>
           <button on:click={() => showModal = false}>취소</button>
+          <button on:click={submitGeneration}>확인</button>
         </div>
       </div>
     </div>
   {/if}
 
+  {#if showLoading}
+    <div class="modal-overlay">
+      <div class="modal">
+        <div class="spinner"></div>
+        <div style="margin-top: 20px;">계획 생성 중...</div>
+      </div>
+    </div>
+  {/if}
+
+  {#if showSuccess}
+    <div class="modal-overlay">
+      <div class="modal">
+        <h3>계획 생성 완료</h3>
+        <div style="margin: 16px 0;">계획이 성공적으로 생성되었습니다.</div>
+        <div class="modal-actions">
+          <button class="notion-btn" on:click={sendToNotion}>노션에 보내기</button>
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  {#if showNotionLoading}
+    <div class="modal-overlay">
+      <div class="modal">
+        <div class="spinner"></div>
+        <div style="margin-top: 20px;">노션에 보내는 중...</div>
+      </div>
+    </div>
+  {/if}
+
+  {#if showNotionDone}
+    <div class="modal-overlay">
+      <div class="modal">
+        <h3>완료되었습니다</h3>
+        <div style="margin: 16px 0;">계획이 노션에 성공적으로 연동되었습니다.</div>
+        <div class="modal-actions">
+          <button class="notion-btn" on:click={gotoMain}>확인</button>
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  {#if showAlertModal}
+    <div class="modal-overlay">
+      <div class="modal">
+        <h3>알림</h3>
+        <div style="margin: 16px 0;">{alertModalMessage}</div>
+        <div class="modal-actions">
+          <button on:click={handleAlertClose}>확인</button>
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  {#if showConfirmModal}
+    <div class="modal-overlay">
+      <div class="modal">
+        <div style="font-size:2rem; margin-bottom:8px;">⚠️</div>
+        <div style="margin-bottom:24px;">{confirmModalMessage}</div>
+        <div class="modal-actions">
+          <button on:click={() => handleConfirmResult(false)}>취소</button>
+          <button class="notion-btn" on:click={() => handleConfirmResult(true)}>확인</button>
+        </div>
+      </div>
+    </div>
+  {/if}
 </div>
+
 
 <style>
   .page-wrapper {
@@ -369,8 +389,6 @@
     overflow-x: hidden;
   }
 
-
-
   .modal-overlay {
     position: fixed;
     top: 0; left: 0;
@@ -388,13 +406,22 @@
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     width: 320px;
+    min-height: 180px; 
+    display: flex;
+    flex-direction: column;
+    justify-content: center; 
+    align-items: center;
     text-align: center;
+  }
+
+  .modal h3 {
+    margin-bottom: 20px;
   }
 
   .modal input {
     width: 100%;
     padding: 10px;
-    margin-top: 12px;
+    margin: 12px 0 0 0; 
     border: 1px solid #ccc;
     border-radius: 8px;
     font-size: 14px;
@@ -415,16 +442,44 @@
     cursor: pointer;
   }
 
+  /* 기본 모달 버튼 스타일 */
   .modal-actions button:first-child {
+    background-color: #e5e7eb;
+    color: #374151;
+  }
+
+  .modal-actions button:last-child {
     background-color: #1f2937;
     color: white;
   }
 
-  .modal-actions button:last-child {
-    background-color: #e5e7eb;
+  /* 노션 버튼 스타일 우선순위 높이기 */
+  .modal-actions .notion-btn {
+    background-color: #1f2937 !important;
+    color: #fff !important;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .modal-actions .notion-btn:hover {
+    background-color: #111827 !important;
   }
 
+  .spinner {
+    margin: 0 auto;
+    border: 6px solid #f3f3f3;
+    border-top: 6px solid #1f2937;
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    animation: spin 1s linear infinite;
+  }
 
-
-
+  @keyframes spin {
+    0% { transform: rotate(0deg);}
+    100% { transform: rotate(360deg);}
+  }
 </style>
