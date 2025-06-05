@@ -12,11 +12,13 @@
   let subjects = [];
   let userId = '';
   let token = '';
+  let notionDbInput = '';
 
   let showModal = false;
-  let notionDbInput = '';
   let showLoading = false;            
-  let showSuccess = false;         
+  let showSuccess = false;    
+  let showNotionLoading = false; 
+  let showNotionDone = false;       
 
   function extractDatabaseId(input: string): string | null {
     try {
@@ -107,29 +109,6 @@
     showModal = true;
   }
 
-  // async function submitGeneration() {
-  //   showModal = false;
-
-  //   try {
-  //     const dbId = extractDatabaseId(notionDbInput.trim());
-  //     if (!dbId) throw new Error('Notion DB ID가 유효하지 않습니다.');
-
-  //     const u = get(user);
-  //     await generateStudyPlan({
-  //       userId: u.userId,
-  //       databaseId: dbId
-  //     });
-
-  //     await confirmAllPlansFromList(u.userId);
-
-  //     alert('✅ 계획 생성 및 Notion 연동이 완료되었습니다!');
-  //     goto('/main');
-  //   } catch (err) {
-  //     console.error('[❌ 계획 생성 실패]', err);
-  //     alert('❗ 계획 생성 또는 연동에 실패했습니다. 다시 시도해주세요.');
-  //   }
-  // }
-
   async function submitGeneration() {
     showModal = false;
     showLoading = true;
@@ -153,24 +132,70 @@
     }
   }
 
-
   async function sendToNotion() {
     showSuccess = false;
-    showLoading = true;
+    showNotionLoading = true;
 
     try {
       const u = get(user);
       await confirmAllPlansFromList(u.userId);
 
-      showLoading = false;
-      alert('✅ 계획이 노션에 성공적으로 연동되었습니다!');
-      goto('/main');
+      showNotionLoading = false;
+      showNotionDone = true;
     } catch (err) {
-      showLoading = false;
+      showNotionLoading = false;
       alert('❗ 노션 연동에 실패했습니다. 다시 시도해주세요.');
       console.error('[❌ 노션 연동 실패]', err);
     }
   }
+
+  function gotoMain() {
+    showNotionDone = false;
+    goto('/main');
+  }
+
+
+  // async function submitGeneration() {
+  //   showModal = false;
+  //   showLoading = true;
+
+  //   try {
+  //     const dbId = extractDatabaseId(notionDbInput.trim());
+  //     if (!dbId) throw new Error('Notion DB ID가 유효하지 않습니다.');
+
+  //     const u = get(user);
+  //     await generateStudyPlan({
+  //       userId: u.userId,
+  //       databaseId: dbId
+  //     });
+
+  //     showLoading = false;
+  //     showSuccess = true;
+  //   } catch (err) {
+  //     showLoading = false;
+  //     alert('❗ 계획 생성에 실패했습니다. 다시 시도해주세요.');
+  //     console.error('[❌ 계획 생성 실패]', err);
+  //   }
+  // }
+
+
+  // async function sendToNotion() {
+  //   showSuccess = false;
+  //   showLoading = true;
+
+  //   try {
+  //     const u = get(user);
+  //     await confirmAllPlansFromList(u.userId);
+
+  //     showLoading = false;
+  //     alert('✅ 계획이 노션에 성공적으로 연동되었습니다!');
+  //     goto('/main');
+  //   } catch (err) {
+  //     showLoading = false;
+  //     alert('❗ 노션 연동에 실패했습니다. 다시 시도해주세요.');
+  //     console.error('[❌ 노션 연동 실패]', err);
+  //   }
+  // }
 
 
 </script>
@@ -201,27 +226,14 @@
     </div>
   </main>
 
-  <!-- {#if showModal}
-    <div class="modal-overlay">
-      <div class="modal">
-        <h3>Notion Database ID 입력</h3>
-        <input bind:value={notionDbInput} placeholder="Database address" />
-        <div class="modal-actions">
-          <button on:click={submitGeneration}>확인</button>
-          <button on:click={() => showModal = false}>취소</button>
-        </div>
-      </div>
-    </div>
-  {/if} -->
-
   {#if showModal}
     <div class="modal-overlay">
       <div class="modal">
         <h3>Notion Database ID 입력</h3>
         <input bind:value={notionDbInput} placeholder="Database address" />
         <div class="modal-actions">
-          <button on:click={submitGeneration}>확인</button>
           <button on:click={() => showModal = false}>취소</button>
+          <button on:click={submitGeneration}>확인</button>
         </div>
       </div>
     </div>
@@ -242,13 +254,32 @@
         <h3>계획 생성 완료</h3>
         <div style="margin: 16px 0;">계획이 성공적으로 생성되었습니다.</div>
         <div class="modal-actions">
-          <button on:click={sendToNotion}>노션에 보내기</button>
+          <button class="notion-btn" on:click={sendToNotion}>노션에 보내기</button>
         </div>
       </div>
     </div>
   {/if}
 
+  {#if showNotionLoading}
+    <div class="modal-overlay">
+      <div class="modal">
+        <div class="spinner"></div>
+        <div style="margin-top: 20px;">노션에 보내는 중...</div>
+      </div>
+    </div>
+  {/if}
 
+  {#if showNotionDone}
+    <div class="modal-overlay">
+      <div class="modal">
+        <h3>완료되었습니다</h3>
+        <div style="margin: 16px 0;">계획이 노션에 성공적으로 연동되었습니다.</div>
+        <div class="modal-actions">
+          <button class="notion-btn" on:click={gotoMain}>확인</button>
+        </div>
+      </div>
+    </div>
+  {/if}
 
 
 </div>
@@ -329,8 +360,6 @@
     overflow-x: hidden;
   }
 
-
-
   .modal-overlay {
     position: fixed;
     top: 0; left: 0;
@@ -384,16 +413,43 @@
     cursor: pointer;
   }
 
+  /* 기본 모달 버튼 스타일 */
   .modal-actions button:first-child {
+    background-color: #e5e7eb;
+  }
+
+  .modal-actions button:last-child {
     background-color: #1f2937;
     color: white;
   }
 
-  .modal-actions button:last-child {
-    background-color: #e5e7eb;
+  /* 노션 버튼 스타일 우선순위 높이기 */
+  .modal-actions .notion-btn {
+    background-color: #1f2937 !important;
+    color: #fff !important;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .modal-actions .notion-btn:hover {
+    background-color: #111827 !important;
   }
 
+  .spinner {
+    margin: 0 auto;
+    border: 6px solid #f3f3f3;
+    border-top: 6px solid #1f2937;
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    animation: spin 1s linear infinite;
+  }
 
-
-
+  @keyframes spin {
+    0% { transform: rotate(0deg);}
+    100% { transform: rotate(360deg);}
+  }
 </style>
