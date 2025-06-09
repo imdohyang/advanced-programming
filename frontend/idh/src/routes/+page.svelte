@@ -7,17 +7,21 @@
   let password = '';
   let loginError = false;
   let errorMessage = '';
-  let userIdInput;
-  let showPassword = false; // 디폴트: false (비밀번호 숨김, EyeOff 표시)
+  let userIdInput: HTMLInputElement | null = null;
+  let showPassword = false;
 
   async function handleLogin() {
     try {
-      await login({ userId, password }); // Svelte store에만 저장됨
+      await login({ userId, password });
       loginError = false;
       goto('/main');
-    } catch (e) {
+    } catch (e: unknown) {
       loginError = true;
-      errorMessage = e.message || '로그인에 실패했습니다.'; 
+      if (e instanceof Error) {
+        errorMessage = e.message || '로그인에 실패했습니다.';
+      } else {
+        errorMessage = '로그인 중 알 수 없는 오류가 발생했습니다.';
+      }
       userId = '';
       password = '';
       userIdInput?.focus();
@@ -28,6 +32,7 @@
     if (event.key === 'Enter') handleLogin();
   }
 </script>
+
 
 <style>
   .wrapper {
@@ -183,8 +188,9 @@
     display: block;
     margin: 0;
     padding: 0;
-    vertical-align: middle;
     margin-bottom: 15px;
+    align-items: center;
+    justify-content: center;
   }
 
   input::placeholder {
@@ -326,3 +332,4 @@
     </div>
   </div>
 </div>
+

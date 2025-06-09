@@ -1,4 +1,4 @@
-<script lang="ts">
+<!-- <script lang="ts">
   import { onMount } from 'svelte';
   import Header from '$lib/components/Header.svelte';
   import SubjectForm from '$lib/components/SubjectForm.svelte';
@@ -203,7 +203,232 @@
     showNotionDone = false;
     goto('/main');
   }
+</script> -->
+
+
+<script lang="ts">
+  import { onMount } from 'svelte';
+  import Header from '$lib/components/Header.svelte';
+  import SubjectForm from '$lib/components/SubjectForm.svelte';
+  import { deleteAllExams } from '$lib/api/exam';
+  import { goto } from '$app/navigation';
+  import { user } from '$lib/stores/user';
+  import { get } from 'svelte/store';
+  import { confirmAllPlansFromList } from '$lib/api/confirm';
+  import { generateStudyPlan } from '$lib/api/ai-planner';
+
+  type Unit = {
+    unitName: string;
+    studyAmount: string;
+    difficulty: string;
+  };
+
+  type Subject = {
+    subjectName: string;
+    startDate: string;
+    endDate: string;
+    importance: number;
+    units: Unit[];
+  };
+
+  let subjects: Subject[] = [];
+  let userId = '';
+  let token = '';
+  let notionDbInput = '';
+
+  let showModal = false;
+  let showLoading = false;
+  let showSuccess = false;
+  let showNotionLoading = false;
+  let showNotionDone = false;
+  let showErrorModal = false;
+  let errorModalMessage = '';
+
+  let showConfirmModal = false;
+  let confirmModalMessage = '';
+  let confirmModalResolve: ((result: boolean) => void) | null = null;
+
+  let showAlertModal = false;
+  let alertModalMessage = '';
+  let alertModalResolve: (() => void) | null = null;
+
+  function customConfirm(message: string): Promise<boolean> {
+    confirmModalMessage = message;
+    showConfirmModal = true;
+    return new Promise((resolve) => {
+      confirmModalResolve = resolve;
+    });
+  }
+
+  function handleConfirmResult(result: boolean) {
+    showConfirmModal = false;
+    if (confirmModalResolve) {
+      confirmModalResolve(result);
+      confirmModalResolve = null;
+    }
+  }
+
+  function customAlert(message: string): Promise<void> {
+    alertModalMessage = message;
+    showAlertModal = true;
+    return new Promise((resolve) => {
+      alertModalResolve = resolve;
+    });
+  }
+
+  function handleAlertClose() {
+    showAlertModal = false;
+    if (alertModalResolve) {
+      alertModalResolve();
+      alertModalResolve = null;
+    }
+  }
+
+  function extractDatabaseId(input: string): string | null {
+    try {
+      const url = new URL(input);
+      const path = url.pathname.replace(/\//g, '');
+      return path || null;
+    } catch (e) {
+      return input.includes('?') ? input.split('?')[0] : input;
+    }
+  }
+
+  onMount(async () => {
+    const u = get(user);
+    if (!u?.userId) {
+      await customAlert('로그인이 필요합니다.');
+      goto('/');
+      return;
+    }
+
+    userId = u.userId;
+    token = u.token;
+
+    try {
+      const res = await fetch(`https://advanced-programming.onrender.com/exam/${userId}`);
+      if (!res.ok) throw new Error('과목 정보 불러오기 실패');
+      const data = await res.json();
+
+      if (data.exams.length === 0) {
+        subjects = [getEmptySubject()];
+      } else {
+        subjects = data.exams.map((exam: any) => ({
+          subjectName: exam.subject,
+          startDate: exam.startDate.slice(0, 10),
+          endDate: exam.endDate.slice(0, 10),
+          importance: exam.importance,
+          units: exam.chapters.map((ch: any) => ({
+            unitName: ch.chapterTitle,
+            studyAmount: String(ch.contentVolume),
+            difficulty: ch.difficulty,
+          })),
+        }));
+      }
+    } catch (err: unknown) {
+      console.error(err);
+      subjects = [getEmptySubject()];
+      await customAlert('과목 정보를 불러오지 못했습니다.');
+    }
+  });
+
+  function getEmptySubject(): Subject {
+    return {
+      subjectName: '',
+      startDate: '',
+      endDate: '',
+      importance: 3,
+      units: [{ unitName: '', studyAmount: '', difficulty: '난이도 선택' }],
+    };
+  }
+
+  async function resetSubjects() {
+    const ok = await customConfirm('모든 과목 정보를 삭제하고 초기화할까요?');
+    if (!ok) return;
+
+    try {
+      await deleteAllExams(userId);
+      subjects = [getEmptySubject()];
+      await customAlert('✅ 모든 과목이 초기화되었습니다.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '알 수 없는 오류';
+      await customAlert(`❌ 초기화 실패: ${msg}`);
+    }
+  }
+
+  function handleSubjectChange(index: number, updatedSubject: Subject) {
+    subjects[index] = { ...updatedSubject };
+    subjects = [...subjects];
+  }
+
+  function addSubject() {
+    subjects = [...subjects, getEmptySubject()];
+  }
+
+  function removeSubject(index: number) {
+    if (subjects.length > 1) {
+      subjects = subjects.filter((_, i) => i !== index);
+    }
+  }
+
+  function handleCreatePlan() {
+    showModal = true;
+  }
+
+  async function submitGeneration() {
+    showModal = false;
+    showLoading = true;
+
+    try {
+      const dbId = extractDatabaseId(notionDbInput.trim());
+      if (!dbId) throw new Error('Notion DB ID가 유효하지 않습니다.');
+
+      const u = get(user);
+      if (!u) return; 
+      await generateStudyPlan({
+        userId: u.userId,
+        databaseId: dbId,
+      });
+
+      showLoading = false;
+      showSuccess = true;
+    } catch (err) {
+      showLoading = false;
+      await customAlert('❗ 계획 생성에 실패했습니다. 다시 시도해주세요.');
+      console.error('[❌ 계획 생성 실패]', err);
+    }
+  }
+
+  async function sendToNotion() {
+    showSuccess = false;
+    showNotionLoading = true;
+
+    try {
+      const u = get(user);
+      if (!u) return; 
+      await confirmAllPlansFromList(u.userId);
+
+      showNotionLoading = false;
+      showNotionDone = true;
+    } catch (err: any) {
+      showNotionLoading = false;
+      if (err.message && (err.message.includes('인증') || err.message.includes('401'))) {
+        await customAlert('노션 인증을 먼저 완료해주세요.');
+      } else {
+        await customAlert('❗ 노션 연동에 실패했습니다. 다시 시도해주세요.');
+      }
+      console.error('[❌ 노션 연동 실패]', err);
+    }
+  }
+
+  function gotoMain() {
+    showNotionDone = false;
+    goto('/main');
+  }
 </script>
+
+
+
 
 <div class="page-wrapper">
   <Header />
