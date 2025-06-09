@@ -1,15 +1,31 @@
-<script>
-  export let index;
-  export let subjectData;
-  export let onChange;
-  export let onRemove;
-  export let userId;
-  export let token;
-  // 커스텀 모달 함수 prop으로 받기
-  export let customAlert;   // (message: string) => Promise<void>
-  export let customConfirm; // (message: string) => Promise<boolean>
-
+<script lang="ts">
   import { deleteExam, createExam } from '$lib/api/exam';
+
+  // 단원 정보 타입
+  type Unit = {
+    unitName: string;
+    studyAmount: string;
+    difficulty: string;
+  };
+
+  // 전체 과목 정보 타입
+  type SubjectData = {
+    subjectName: string;
+    startDate: string;
+    endDate: string;
+    importance: number;
+    units: Unit[];
+  };
+
+  // props
+  export let index: number;
+  export let subjectData: SubjectData;
+  export let onChange: (index: number, newSubject: SubjectData) => void;
+  export let onRemove: (index: number) => void;
+  export let userId: string;
+  export let token: string;
+  export let customAlert: (message: string) => Promise<void>;
+  export let customConfirm: (message: string) => Promise<boolean>;
 
   const difficultyOptions = ['난이도 선택', '쉬움', '보통', '어려움'];
 
@@ -19,7 +35,7 @@
     onChange(index, newSubject);
   }
 
-  function removeUnit(i) {
+  function removeUnit(i: number) {
     if (subjectData.units.length > 1) {
       const newUnits = subjectData.units.filter((_, j) => j !== i);
       const newSubject = { ...subjectData, units: newUnits };
@@ -27,12 +43,12 @@
     }
   }
 
-  function handleFieldChange(field, value) {
+  function handleFieldChange(field: keyof SubjectData, value: any) {
     const newSubject = { ...subjectData, [field]: value };
     onChange(index, newSubject);
   }
 
-  function handleUnitChange(i, field, value) {
+  function handleUnitChange(i: number, field: keyof Unit, value: any) {
     const newUnits = subjectData.units.map((unit, idx) =>
       idx === i ? { ...unit, [field]: value } : unit
     );
@@ -40,30 +56,28 @@
     onChange(index, newSubject);
   }
 
-  // 삭제 버튼: confirm 모달 → 삭제 → alert 모달
   async function handleDelete() {
     const ok = await customConfirm('❌ 과목을 삭제할까요?');
     if (!ok) return;
     try {
-      await deleteExam(userId, subjectData.subjectName, token);
+      await deleteExam(userId, subjectData.subjectName);
       onRemove(index);
       await customAlert('과목이 삭제되었습니다.');
-    } catch (err) {
-      await customAlert(`시험 삭제 실패: ${err.message}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '알 수 없는 오류';
+      await customAlert(`시험 삭제 실패: ${msg}`);
     }
   }
 
-  // 중복 과목명 체크 함수
-  async function checkSubjectExists(userId, subjectName) {
+  async function checkSubjectExists(userId: string, subjectName: string): Promise<boolean> {
     const res = await fetch(`https://advanced-programming.onrender.com/exam/${userId}`);
     if (!res.ok) {
       throw new Error('과목 정보 확인 실패');
     }
     const data = await res.json();
-    return data.exams.some(exam => exam.subject.trim() === subjectName.trim());
+    return data.exams.some((exam: any) => exam.subject.trim() === subjectName.trim());
   }
 
-  // 확인 버튼: 중복 체크 → alert 모달 → 등록 → alert 모달
   async function handleConfirm() {
     try {
       const isDuplicate = await checkSubjectExists(userId, subjectData.subjectName);
@@ -87,45 +101,48 @@
         chapters,
       };
 
-      await createExam(examData, token);
+      await createExam(examData);
       await customAlert('✅ 시험 등록 완료!');
-    } catch (err) {
-      await customAlert(`시험 등록 실패: ${err.message}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '알 수 없는 오류';
+      await customAlert(`시험 등록 실패: ${msg}`);
     }
   }
 </script>
+
+
 
 <div class="subject-card">
   <h2 class="subject-card-title">과목 {index + 1}</h2>
 
   <div class="form-group">
     <label for="subject-name">과목명</label>
-    <input type="text" id="subject-name" placeholder="과목명을 입력하세요" bind:value={subjectData.subjectName} on:input={(e) => handleFieldChange('subjectName', e.target.value)} />
+    <input type="text" id="subject-name" placeholder="과목명을 입력하세요" bind:value={subjectData.subjectName} on:input={(e) => handleFieldChange('subjectName', (e.target as HTMLInputElement).value)} />
   </div>
 
   <div class="date-group">
     <div class="form-group">
       <label>시작일</label>
-      <input type="date" bind:value={subjectData.startDate} on:input={(e) => handleFieldChange('startDate', e.target.value)} />
+      <input type="date" bind:value={subjectData.startDate} on:input={(e) => handleFieldChange('startDate', (e.target as HTMLInputElement).value)} />
     </div>
     <div class="form-group">
       <label>종료일</label>
-      <input type="date" bind:value={subjectData.endDate} on:input={(e) => handleFieldChange('endDate', e.target.value)} />
+      <input type="date" bind:value={subjectData.endDate} on:input={(e) => handleFieldChange('endDate', (e.target as HTMLInputElement).value)} />
     </div>
   </div>
 
   <div class="form-group">
     <label>중요도: {subjectData.importance}</label>
-    <input type="range" min="1" max="5" bind:value={subjectData.importance} on:input={(e) => handleFieldChange('importance', +e.target.value)} class="slider" />
+    <input type="range" min="1" max="5" bind:value={subjectData.importance} on:input={(e) => handleFieldChange('importance', +(e.target as HTMLInputElement).value)} class="slider" />
   </div>
 
   <div class="units-section">
     <h3 class="units-title">학습 단원</h3>
     {#each subjectData.units as unit, i (i)}
       <div class="unit-entry">
-        <input type="text" placeholder="단원명" bind:value={unit.unitName} on:input={(e) => handleUnitChange(i, 'unitName', e.target.value)} class="unit-input" />
-        <input type="text" placeholder="페이지" bind:value={unit.studyAmount} on:input={(e) => handleUnitChange(i, 'studyAmount', e.target.value)} class="unit-input" />
-        <select bind:value={unit.difficulty} on:change={(e) => handleUnitChange(i, 'difficulty', e.target.value)} class="unit-select">
+        <input type="text" placeholder="단원명" bind:value={unit.unitName} on:input={(e) => handleUnitChange(i, 'unitName', (e.target as HTMLInputElement).value)} class="unit-input" />
+        <input type="text" placeholder="페이지" bind:value={unit.studyAmount} on:input={(e) => handleUnitChange(i, 'studyAmount', (e.target as HTMLInputElement).value)} class="unit-input" />
+        <select bind:value={unit.difficulty} on:change={(e) => handleUnitChange(i, 'difficulty', (e.target as HTMLInputElement).value)} class="unit-select">
           {#each difficultyOptions as option}
             <option value={option}>{option}</option>
           {/each}
