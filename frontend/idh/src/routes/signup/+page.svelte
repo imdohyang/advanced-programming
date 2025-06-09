@@ -1,28 +1,25 @@
-<script>
-  import { UserRound, CalendarCheck } from 'lucide-svelte';
+<script lang="ts">
+  import { UserRound, CalendarCheck, Eye, EyeOff } from 'lucide-svelte';
   import { goto } from '$app/navigation';
-  import { checkUserExists } from '$lib/api/user';
-  import { signupUser } from '$lib/api/user';
-  import { Eye, EyeOff } from 'lucide-svelte'; 
+  import { checkUserExists, signupUser } from '$lib/api/user';
 
   let userId = '';
   let password = '';
   let confirmPassword = '';
 
-  let duplicateStatus = null;
+  let duplicateStatus: 'available' | 'unavailable' | null = null;
   let passwordError = false;
   let passwordMismatch = false;
   let passwordTouched = false;
   let showModal = false;
-  let missingField = null;
+  let missingField: 'userId' | 'password' | 'confirmPassword' | null = null;
   let modalMessage = '';
 
-  let userIdInput;
-  let passwordInput;
-  let confirmPasswordInput;
+  let userIdInput: HTMLInputElement | null = null;
+  let passwordInput: HTMLInputElement | null = null;
+  let confirmPasswordInput: HTMLInputElement | null = null;
 
   let flashMessage = false;
-
   let showPassword = false;       
   let showConfirmPassword = false;
 
@@ -40,16 +37,15 @@
         flashMessage = false;
       }, 50);
 
-    } catch (e) {
-      modalMessage = e.message || '중복 확인 중 오류가 발생했습니다.';
+    } catch (e: unknown) {
+      modalMessage = e instanceof Error ? e.message : '중복 확인 중 오류가 발생했습니다.';
       showModal = true;
     }
   }
 
-  // ✅ 클로저로 변경된 validatePassword
   const validatePassword = (function createPasswordValidator() {
     const regex = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
-    return function (pw) {
+    return function (pw: string) {
       return regex.test(pw);
     };
   })();
@@ -97,24 +93,25 @@
       await signupUser({ userId: userId.trim(), password: password.trim() });
       alert('가입이 완료되었습니다!');
       goto('/');
-    } catch (e) {
-      modalMessage = e.message;
+    } catch (e: unknown) {
+      modalMessage = e instanceof Error ? e.message : '회원가입 중 오류가 발생했습니다.';
       showModal = true;
     }
   }
 
   function handleModalConfirm() {
     showModal = false;
-    if (missingField === 'userId') userIdInput.focus();
-    else if (missingField === 'password') passwordInput.focus();
-    else if (missingField === 'confirmPassword') confirmPasswordInput.focus();
+    if (missingField === 'userId') userIdInput?.focus();
+    else if (missingField === 'password') passwordInput?.focus();
+    else if (missingField === 'confirmPassword') confirmPasswordInput?.focus();
     missingField = null;
   }
 
-  function handleKeydown(event) {
+  function handleKeydown(event: KeyboardEvent) {
     if (event.key === 'Enter') handleSignup();
   }
 </script>
+
 
 
 <style>
