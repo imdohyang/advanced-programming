@@ -262,7 +262,7 @@
     }
   }
 </style>
-<!-- 
+
 <div class="wrapper">
   <header>
     <div class="header-container">
@@ -331,82 +331,5 @@
       </div>
     </div>
   </div>
-</div> -->
-<div class="wrapper">
-  <header>
-    <div class="header-container">
-      <div class="logo-section">
-        <CalendarCheck color="#1f2937" size={28} />
-        <span class="logo-text">AutoPlanner</span>
-      </div>
-    </div>
-  </header>
-
-  <div class="content">
-    <div class="login-box" role="form" on:keydown={handleKeydown}>
-      <div class="icon-wrapper">
-        <UserRound size={60} stroke="#6b7280" />
-      </div>
-
-      <h2>환영합니다</h2>
-      <p>AutoPlanner에 로그인 하세요</p>
-
-      <div>
-        <label for="userId">아이디</label>
-        <input
-          id="userId"
-          bind:this={userIdInput}
-          type="text"
-          bind:value={userId}
-          placeholder="아이디를 입력하세요"
-        />
-      </div>
-
-      <div>
-        <label for="password">비밀번호</label>
-        <div class="password-wrapper">
-          <input
-            id="password"
-            type={showPassword ? 'text' : 'password'}
-            bind:value={password}
-            placeholder="비밀번호를 입력하세요"
-          />
-          <button
-            type="button"
-            class="eye-button"
-            on:click={() => (showPassword = !showPassword)}
-            aria-label="비밀번호 보기 전환"
-            tabindex="-1"
-          >
-            {#if showPassword}
-              <EyeOff size={20} />
-            {:else}
-              <Eye size={20} />
-            {/if}
-          </button>
-        </div>
-      </div>
-
-      <div class="error">
-        {#if loginError}
-          {errorMessage || '아이디 또는 비밀번호가 일치하지 않습니다.'}
-        {/if}
-      </div>
-
-      <button on:click={handleLogin}>로그인</button>
-
-      <div class="divider"></div>
-      <div class="footer">
-        <p>계정이 없으신가요?</p>
-        <a
-          href="/signup"
-          role="link"
-          on:click|preventDefault={() => goto('/signup')}
-          on:keydown={(e) => e.key === 'Enter' && goto('/signup')}
-        >
-          회원가입
-        </a>
-      </div>
-    </div>
-  </div>
 </div>
+
