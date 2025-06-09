@@ -24,7 +24,8 @@
       : `${currentUser.userId}`;
 
     try {
-      const res = await getUserPreference(currentUser.userId);
+      // const res = await getUserPreference(currentUser.userId);
+      const res = await getUserPreference();
       learningStyle = res.style === 'focus' ? '하루 한 과목 집중' : '여러 과목 병행';
       studyDays = res.studyDays;
       studySessions = res.sessionsPerDay;
