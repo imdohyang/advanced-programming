@@ -7,7 +7,7 @@
   async function handleGoToExam() {
     console.log('userId:', userId);
     try {
-      const preference = await getUserPreference(userId);
+      const preference = await getUserPreference();
 
       // preference가 존재하는지 확인 (예: style이 없으면 설정 안 된 것으로 간주)
       if (!preference?.style || !preference?.studyDays || !preference?.sessionsPerDay) {
