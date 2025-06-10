@@ -61,15 +61,17 @@
 #       - name: Build Svelte App
 #         run: npm run build
 
-name: CI – Backend (.env keys & Swagger check)
+name: CI – Backend (.env keys & Swagger check) & Frontend
 
 on:
   push:
     paths:
       - 'auto-planner-backend/**'
+      - 'frontend/idh/**'
   pull_request:
     paths:
       - 'auto-planner-backend/**'
+      - 'frontend/idh/**'
 
 jobs:
   backend:
@@ -112,3 +114,36 @@ jobs:
           node dist/main.js &
           sleep 5
           echo "Swagger app started successfully"
+
+  frontend:
+    name: Frontend CI (Svelte)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend/idh
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Type check with svelte-check (ignore warnings)
+        run: |
+          npx svelte-check --tsconfig ./tsconfig.json > check.log 2>&1
+          cat check.log
+          if grep -q "error:" check.log; then
+            echo "❌ Type errors found"
+            exit 1
+          else
+            echo "✅ No critical type errors"
+          fi
+
+      - name: Build Svelte App
+        run: npm run build
