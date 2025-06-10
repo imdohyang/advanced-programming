@@ -33,11 +33,13 @@
       <Welcome />
       <div class="cards-row">
         <MyInfoCard />
-        {#if loading}
-          <p>userId를 불러오는 중입니다...</p>
-        {:else}
-          <PlanCard userId={userId} />
-        {/if}
+          {#if loading}
+            <p>userId를 불러오는 중입니다...</p>
+          {:else if userId}
+            <PlanCard userId={userId} />
+          {:else}
+            <p>userId가 존재하지 않습니다.</p>
+          {/if}
       </div>
       <NotionLink />
     </div>
