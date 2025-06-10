@@ -17,7 +17,7 @@ export async function checkUserExists(userId: string): Promise<boolean> {
   }
 }
 
-export async function signupUser({ userId, password }) {
+export async function signupUser({ userId, password }: { userId: string; password: string }) {
   const res = await fetch(`${BASE_URL}/user`, {
     method: 'POST',
     headers: {
