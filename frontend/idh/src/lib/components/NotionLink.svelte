@@ -20,7 +20,11 @@
       // 새 창에서 열기
       window.open(url, '_blank', 'width=600,height=700');
     } catch (err) {
-      alert(err.message || '노션 연동 중 오류가 발생했습니다.');
+      if (err instanceof Error) {
+        alert(err.message || '노션 연동 중 오류가 발생했습니다.');
+      } else {
+        alert('알 수 없는 오류가 발생했습니다.');
+      }
     }
   }
 
