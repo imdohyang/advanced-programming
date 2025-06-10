@@ -93,15 +93,16 @@ jobs:
 
       - name: Check if .env and .env.example have same keys
         run: |
-          echo "🔍 Comparing environment variable keys in .env and .env.example"
-          ENV_KEYS=$(grep -vE '^#|^$' .env | cut -d '=' -f1 | sort)
+          ENV_KEYS=$(grep -vE '^#|^$' auto-planner-backend/.env | cut -d '=' -f1 | sort)
           EXAMPLE_KEYS=$(grep -vE '^#|^$' .env.example | cut -d '=' -f1 | sort)
+          
           if diff <(echo "$ENV_KEYS") <(echo "$EXAMPLE_KEYS"); then
-            echo "✅ .env and .env.example have the same keys"
+            echo ".env and .env.example have the same keys"
           else
-            echo "❌ .env and .env.example keys do not match!"
+            echo ".env and .env.example keys do not match!"
             exit 1
           fi
+      
 
       - name: Build for Swagger bootstrap test
         run: npm run build
@@ -110,4 +111,4 @@ jobs:
         run: |
           node dist/main.js &
           sleep 5
-          echo "✅ Swagger app started successfully"
+          echo "Swagger app started successfully"
