@@ -7,6 +7,7 @@
 
   let userId = '';
   let learningStyle: 'focus' | 'parallel' = 'focus';
+  type DayKey = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
   let studyDays: { [key: string]: boolean } = {
     mon: false, tue: false, wed: false,
     thu: false, fri: false, sat: false, sun: false,
@@ -24,16 +25,16 @@
     userId = currentUser.userId;
 
     try {
-      const res = await getUserPreference(userId);
+      const res = await getUserPreference();
 
       // ✅ 기존 설정 반영
       if (res) {
         learningStyle = res.style === 'focus' ? 'focus' : 'parallel';
 
         // 요일은 문자열 배열 → 객체로 다시 매핑
-        for (const key in studyDays) {
+        (Object.keys(studyDays) as DayKey[]).forEach((key) => {
           studyDays[key] = res.studyDays.includes(convertDayKeyToKor(key));
-        }
+        });
 
         studySessions = res.sessionsPerDay;
       }
@@ -49,8 +50,11 @@
   });
 
   // 영어 요일 key → 한글 변환 함수
-  function convertDayKeyToKor(key: string): string {
-    const map = { mon: '월', tue: '화', wed: '수', thu: '목', fri: '금', sat: '토', sun: '일' };
+  function convertDayKeyToKor(key: DayKey): string {
+    const map: Record<DayKey, string> = {
+      mon: '월', tue: '화', wed: '수',
+      thu: '목', fri: '금', sat: '토', sun: '일',
+    };
     return map[key];
   }
 
@@ -59,7 +63,7 @@
   }
 
   async function handleSubmit() {
-    const selectedDays = Object.entries(studyDays)
+    const selectedDays = (Object.entries(studyDays) as [DayKey, boolean][])
       .filter(([_, selected]) => selected)
       .map(([key]) => convertDayKeyToKor(key));
 

@@ -6,6 +6,7 @@
   let userId = '';
   let password = '';
   let confirmPassword = '';
+  let lastCheckedUserId = '';
 
   let duplicateStatus: 'available' | 'unavailable' | null = null;
   let passwordError = false;
@@ -32,6 +33,7 @@
 
       flashMessage = true;
       duplicateStatus = null;
+      lastCheckedUserId = userId.trim();
       setTimeout(() => {
         duplicateStatus = newStatus;
         flashMessage = false;
@@ -71,6 +73,13 @@
     if (!password) {
       missingField = 'password';
       modalMessage = '비밀번호는 필수 입력 사항입니다.';
+      showModal = true;
+      return;
+    }
+
+    if (duplicateStatus !== 'available' || lastCheckedUserId !== userId.trim()) {
+      modalMessage = '아이디 중복 확인을 해주세요.';
+      missingField = 'userId';
       showModal = true;
       return;
     }
